@@ -1,7 +1,7 @@
 {
-  "short_name": "Spy",
-  "name": "Spy Game",
-  "description": "A Spy Progressive Web Application",
+  "short_name": "EMERGENCY CHAT",
+  "name": "EMERGENCY CHAT",
+  "description": "A Chat Progressive Web Application",
   "scope": "/",
   "start_url": "/",
   "display": "standalone",
