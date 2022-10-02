@@ -1,0 +1,50 @@
+version: '3.7'
+
+services:
+  chat:
+    build:
+      context: .
+      target: development
+    command: yarn w
+    ports:
+      - '4312:4312'
+    volumes:
+      - .:/srv/chatws
+      - chat_node_modules:/srv/chat/node_modules
+    labels:
+      - 'traefik.enable=true' # enables the service
+      - 'traefik.http.routers.chat.entrypoints=https'
+      - '--entryPoints.web.address=:4312'
+      - 'traefik.http.routers.chat.rule=Host(`chat.aspalani.ir`)' # domain to expose on
+      - 'traefik.http.routers.chat.entrypoints=websecure' # if you named your 443 entrypoint differently than webscure, substitu$
+      # - "traefik.http.routers.chat.tls.certresolver=letsencrypt"
+      - 'traefik.http.routers.chat.tls.certresolver=cloudflare'
+      # - traefik.port=80
+    networks:
+      - proxy
+  server:
+    build:
+      context: ./server
+      target: development
+    command: node index.js
+    ports:
+      - '4312:4312'
+    volumes:
+      - ./server:/srv/chatws
+      - chat_node_modules:/srv/chatws/node_modules
+    labels:
+      - 'traefik.enable=true' # enables the service
+      - 'traefik.http.routers.chat.entrypoints=https'
+      - '--entryPoints.web.address=:4312'
+      - 'traefik.http.routers.chat.rule=Host(`chat.aspalani.ir`)' # domain to expose on
+      - 'traefik.http.routers.chat.entrypoints=websecure' # if you named your 443 entrypoint differently than webscure, substitu$
+      # - "traefik.http.routers.chat.tls.certresolver=letsencrypt"
+      - 'traefik.http.routers.chat.tls.certresolver=cloudflare'
+      # - traefik.port=80
+    networks:
+      - proxy
+volumes:
+  chat_node_modules:
+networks:
+  proxy:
+    external: true

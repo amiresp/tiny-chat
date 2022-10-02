@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ESNEXT",
+    "module": "ESNEXT",
+    "lib": ["ESNEXT", "DOM", "DOM.Iterable"],
+    "declaration": true,
+    "composite": true,
+    "importHelpers": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": [
+    "demo/**/*.ts",
+    "package/**/*.ts",
+    "components/**/*.ts",
+    "components/**/**/*.ts"
+  ],
+  "exclude": [],
+  "compileOnSave": false
+}
