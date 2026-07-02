@@ -1,0 +1,60 @@
+name: Build clients without install
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: [self-hosted, Windows, X64]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          clean: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Verify dependencies
+        shell: pwsh
+        run: |
+          if (!(Test-Path "node_modules")) { throw "node_modules is missing" }
+          if (!(Test-Path "node_modules/.bin/electron-builder.cmd")) { throw "electron-builder is missing" }
+      - run: npm run electron:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verdant-windows
+          path: apps/client/release/*
+          if-no-files-found: error
+
+  android:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          clean: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Verify dependencies
+        run: |
+          test -d node_modules
+          test -x node_modules/.bin/vite
+          test -x node_modules/.bin/cap
+      - run: npm run build -w @verdant/client
+      - run: test -d android || npx cap add android
+        working-directory: apps/client
+      - run: npx cap sync android
+        working-directory: apps/client
+      - run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+        working-directory: apps/client/android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verdant-android-apk
+          path: apps/client/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
