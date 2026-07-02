@@ -1,0 +1,11 @@
+{
+  "name": "@verdant/client",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {"dev":"vite","build":"vite build","preview":"vite preview","electron:dev":"concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"","electron:build":"npm run build && electron-builder --win nsis portable","android:sync":"npm run build && cap sync android"},
+  "dependencies": {"@capacitor/core":"^7.0.1","dexie":"^4.0.11","emoji-picker-react":"^4.12.0","lucide-react":"^0.468.0","react":"^19.0.0","react-dom":"^19.0.0","socket.io-client":"^4.8.1"},
+  "devDependencies": {"@capacitor/android":"^7.0.1","@capacitor/cli":"^7.0.1","@vitejs/plugin-react":"^4.3.4","concurrently":"^9.1.2","electron":"^34.0.0","electron-builder":"^25.1.8","vite":"^6.0.5","vite-plugin-pwa":"^0.21.1","wait-on":"^8.0.2"},
+  "build": {"appId":"chat.verdant.app","productName":"Verdant Chat","directories":{"output":"release"},"files":["dist/**/*","electron/**/*"],"win":{"target":["nsis","portable"]},"nsis":{"oneClick":false,"allowToChangeInstallationDirectory":true}}
+}
