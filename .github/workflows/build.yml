@@ -1,35 +1,101 @@
 name: Build clients
+
 on:
   workflow_dispatch:
+
   push:
-    tags: ['v*']
-permissions: { contents: write }
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
 jobs:
   windows:
+    name: Build Windows EXE
     runs-on: windows-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - run: npm install
-      - run: npm run electron:build
-      - uses: actions/upload-artifact@v4
-        with: { name: verdant-windows, path: apps/client/release/* }
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Show versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build Windows clients
+        run: npm run electron:build
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: verdant-windows
+          path: apps/client/release/*
+          if-no-files-found: error
+          retention-days: 14
+
   android:
+    name: Build Android APK
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 21 }
-      - run: npm install
-      - run: npm run build -w @verdant/client
-      - run: npx cap add android
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Show versions
+        run: |
+          node --version
+          npm --version
+          java --version
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build web client
+        run: npm run build -w @verdant/client
+
+      - name: Create Android project
+        run: npx cap add android
         working-directory: apps/client
-      - run: npx cap sync android
+
+      - name: Sync Capacitor
+        run: npx cap sync android
         working-directory: apps/client
-      - run: chmod +x gradlew && ./gradlew assembleDebug
+
+      - name: Build debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
         working-directory: apps/client/android
-      - uses: actions/upload-artifact@v4
-        with: { name: verdant-android-apk, path: apps/client/android/app/build/outputs/apk/debug/app-debug.apk }
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: verdant-android-apk
+          path: apps/client/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
