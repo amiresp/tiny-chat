@@ -1,9 +1,8 @@
-node_modules
-**/node_modules
 .git
 .github
 .env
 *.log
+.npm-cache
 apps/client/dist
 apps/client/release
 apps/client/android
