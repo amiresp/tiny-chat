@@ -1,9 +1,12 @@
 import { apiOrigin } from './runtime';
 
 export const getToken = () => localStorage.getItem('verdant-token');
-export const setToken = (token) => token
-  ? localStorage.setItem('verdant-token', token)
-  : localStorage.removeItem('verdant-token');
+
+export function setToken(token) {
+  if (token) localStorage.setItem('verdant-token', token);
+  else localStorage.removeItem('verdant-token');
+  window.dispatchEvent(new CustomEvent('verdant-auth-change', { detail: { authenticated: Boolean(token) } }));
+}
 
 export async function api(path, options = {}) {
   const headers = { ...options.headers };
