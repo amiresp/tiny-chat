@@ -2,8 +2,11 @@
   "name": "verdant-chat",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
+    "preinstall": "node -e \"const major=Number(process.versions.node.split('.')[0]);if(major!==22){console.error('Verdant Chat requires Node.js 22.x. Current: '+process.version);process.exit(1)}\"",
     "dev": "concurrently -n server,client -c auto \"npm run dev -w @verdant/server\" \"npm run dev -w @verdant/client\"",
     "build": "npm run build -w @verdant/client",
     "start": "npm run start -w @verdant/server",
@@ -11,6 +14,11 @@
     "electron:build": "npm run electron:build -w @verdant/client",
     "android:sync": "npm run android:sync -w @verdant/client"
   },
-  "devDependencies": {"concurrently": "^9.1.2"},
-  "engines": {"node": ">=22"}
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": "22.x",
+    "npm": ">=10 <12"
+  }
 }
