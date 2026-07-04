@@ -5,15 +5,19 @@ RUN npm config set registry https://package-mirror.liara.ir/repository/npm/ --gl
 WORKDIR /app
 
 COPY package*.json ./
+COPY .npmrc ./
 COPY apps/server/package.json apps/server/package.json
 COPY apps/client/package.json apps/client/package.json
-COPY node_modules ./node_modules
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ \
+    && npm install --omit=dev -w @verdant/server --no-audit --no-fund \
+    && apt-get purge -y --auto-remove python3 make g++ \
+    && rm -rf /var/lib/apt/lists/* /root/.npm
+
 COPY apps/server apps/server
 
-RUN test -d /app/node_modules \
-    && test -f /app/node_modules/.package-lock.json \
-    && node -e "require.resolve('express'); require.resolve('better-sqlite3'); require.resolve('drizzle-orm')" \
-    && mkdir -p /app/data /app/storage/uploads
+RUN mkdir -p /app/data /app/storage/uploads
 
 EXPOSE 3001
 
