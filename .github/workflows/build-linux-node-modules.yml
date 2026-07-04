@@ -1,0 +1,60 @@
+name: Build Linux node_modules
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - package.json
+      - apps/client/package.json
+      - apps/server/package.json
+      - .npmrc
+      - .github/workflows/build-linux-node-modules.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build-node-modules:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install dependencies in Node 22 Bookworm
+        env:
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+        run: |
+          rm -rf node_modules package-lock.json
+          docker run --rm \
+            -e HOME=/tmp \
+            -e npm_config_registry="$NPM_CONFIG_REGISTRY" \
+            -e npm_config_cache=/tmp/.npm \
+            -v "$GITHUB_WORKSPACE:/app" \
+            -w /app \
+            node:22-bookworm \
+            bash -lc 'node --version && npm --version && npm install --include=dev --no-audit --no-fund && touch node_modules/.verdant-node22-linux'
+
+      - name: Verify native dependencies
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/app" \
+            -w /app \
+            node:22-bookworm \
+            node -e "require('better-sqlite3'); require('argon2'); require('vite'); console.log('Linux Node 22 dependencies are valid')"
+
+      - name: Create archive
+        run: |
+          tar -czf tiny-chat-node-modules-linux-node22.tar.gz node_modules package-lock.json
+          sha256sum tiny-chat-node-modules-linux-node22.tar.gz > tiny-chat-node-modules-linux-node22.tar.gz.sha256
+
+      - name: Upload dependency artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiny-chat-node-modules-linux-node22-${{ github.sha }}
+          path: |
+            tiny-chat-node-modules-linux-node22.tar.gz
+            tiny-chat-node-modules-linux-node22.tar.gz.sha256
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
