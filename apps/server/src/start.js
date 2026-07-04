@@ -1,3 +1,3 @@
 import './rss-patch.js';
-import './direct-chat-patch.js';
+import './feature-patch.js';
 await import('./index.js');
