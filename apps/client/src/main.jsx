@@ -19,10 +19,16 @@ import {
   X,
 } from 'lucide-react';
 import { api, getToken, setToken } from './api';
+import { apiOrigin, socketOrigin } from './runtime';
 import { cacheChats, cacheMessages, enqueue, offlineDb, queued } from './offline';
 import './styles.css';
 
-const socketUrl = import.meta.env.VITE_SOCKET_URL || location.origin;
+function resolveAssetUrl(value) {
+  if (!value) return value;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith('/')) return `${apiOrigin}${value}`;
+  return value;
+}
 
 function Auth({ onDone }) {
   const [mode, setMode] = useState('login');
@@ -106,6 +112,11 @@ function App() {
   const recorder = useRef(null);
   const chunks = useRef([]);
   const actionsRef = useRef(null);
+  const activeIdRef = useRef(null);
+
+  useEffect(() => {
+    activeIdRef.current = active?.id ?? null;
+  }, [active?.id]);
 
   useEffect(() => {
     if (!getToken()) return;
@@ -116,15 +127,24 @@ function App() {
     if (!user) return undefined;
 
     loadChats();
-    const currentSocket = io(socketUrl, { auth: { token: getToken() } });
+    const currentSocket = io(socketOrigin, { auth: { token: getToken() } });
     socket.current = currentSocket;
+
     currentSocket.on('connect', () => {
       setStatus('connected');
       flush(currentSocket);
     });
     currentSocket.on('disconnect', () => setStatus(navigator.onLine ? 'connecting' : 'offline'));
+    currentSocket.on('chat:new', (chat) => {
+      setChats((current) => [chat, ...current.filter((item) => item.id !== chat.id)]);
+      cacheChats([chat]).catch(() => {});
+    });
     currentSocket.on('message:new', (message) => {
-      setMessages((current) => active?.id === message.chatId ? [...current.filter((item) => item.clientId !== message.clientId), message] : current);
+      if (activeIdRef.current !== message.chatId) return;
+      setMessages((current) => [
+        ...current.filter((item) => item.clientId !== message.clientId),
+        message,
+      ]);
     });
 
     const online = () => setStatus(currentSocket.connected ? 'connected' : 'connecting');
@@ -137,7 +157,7 @@ function App() {
       removeEventListener('online', online);
       removeEventListener('offline', offline);
     };
-  }, [user, active?.id]);
+  }, [user]);
 
   useEffect(() => {
     if (!showActions) return undefined;
@@ -154,9 +174,12 @@ function App() {
     try {
       const data = await api('/api/chats');
       setChats(data.chats);
-      cacheChats(data.chats);
+      await cacheChats(data.chats);
+      return data.chats;
     } catch {
-      setChats(await offlineDb.chats.toArray());
+      const cached = await offlineDb.chats.orderBy('updatedAt').reverse().toArray();
+      setChats(cached);
+      return cached;
     }
   }
 
@@ -164,11 +187,13 @@ function App() {
     setActive(chat);
     setShowNew(false);
     setShowActions(false);
+    setMessages([]);
+
     try {
       const data = await api(`/api/chats/${chat.id}/messages`);
       const list = data.messages || data.items || [];
       setMessages(list);
-      if (!data.rss) cacheMessages(chat.id, list);
+      if (!data.rss) await cacheMessages(chat.id, list);
     } catch (requestError) {
       if (chat.type === 'rss') {
         setMessages([]);
@@ -179,6 +204,19 @@ function App() {
     }
   }
 
+  async function handleChatCreated(chat) {
+    setShowNew(false);
+    if (!chat) {
+      await loadChats();
+      return;
+    }
+
+    setChats((current) => [chat, ...current.filter((item) => item.id !== chat.id)]);
+    await cacheChats([chat]);
+    await openChat(chat);
+    loadChats().catch(() => {});
+  }
+
   async function refreshActiveChat() {
     if (!active) return;
     await openChat(active);
@@ -186,12 +224,17 @@ function App() {
 
   async function hideActiveChat() {
     if (!active) return;
-    const confirmed = window.confirm(active.type === 'rss' ? 'Remove this RSS channel from your conversations?' : 'Hide this conversation? It will be removed from your list.');
+    const confirmed = window.confirm(
+      active.type === 'rss'
+        ? 'Remove this RSS channel from your conversations?'
+        : 'Hide this conversation? It will be removed from your list.',
+    );
     if (!confirmed) return;
 
     try {
       await api(`/api/chats/${active.id}`, { method: 'DELETE' });
       setShowActions(false);
+      setChats((current) => current.filter((item) => item.id !== active.id));
       setActive(null);
       setMessages([]);
       await loadChats();
@@ -201,6 +244,7 @@ function App() {
   }
 
   async function flush(currentSocket = socket.current) {
+    if (!currentSocket) return;
     for (const message of await queued()) {
       await offlineDb.outbox.update(message.clientId, { status: 'sending' });
       currentSocket.emit('message:send', message, async (result) => {
@@ -237,9 +281,10 @@ function App() {
     formData.append('file', blob, name);
     formData.append('clientId', crypto.randomUUID());
     formData.append('type', type);
+
     try {
       await api(`/api/chats/${active.id}/files`, { method: 'POST', body: formData });
-      openChat(active);
+      await openChat(active);
     } catch (requestError) {
       alert(requestError.message);
     }
@@ -258,7 +303,11 @@ function App() {
       chunks.current = [];
       mediaRecorder.ondataavailable = (event) => chunks.current.push(event.data);
       mediaRecorder.onstop = () => {
-        uploadFile(new Blob(chunks.current, { type: 'audio/webm' }), `voice-${Date.now()}.webm`, 'voice');
+        uploadFile(
+          new Blob(chunks.current, { type: 'audio/webm' }),
+          `voice-${Date.now()}.webm`,
+          'voice',
+        );
         stream.getTracks().forEach((track) => track.stop());
       };
       mediaRecorder.start();
@@ -270,8 +319,19 @@ function App() {
 
   function exportHtml() {
     if (!active) return;
-    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-    const body = messages.map((message) => `<article><b>${escapeHtml(message.senderId === user.id ? user.username : 'Member')}</b><time>${new Date(message.createdAt).toLocaleString()}</time><p>${escapeHtml(message.body || message.title || '')}</p>${message.fileUrl ? `<a href="${escapeHtml(message.fileUrl)}">${escapeHtml(message.fileName || 'Download file')}</a>` : ''}${message.link ? `<a href="${escapeHtml(message.link)}">Open source</a>` : ''}</article>`).join('');
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[character]);
+
+    const body = messages.map((message) => {
+      const fileUrl = resolveAssetUrl(message.fileUrl);
+      return `<article><b>${escapeHtml(message.senderId === user.id ? user.username : 'Member')}</b><time>${new Date(message.createdAt).toLocaleString()}</time><p>${escapeHtml(message.body || message.title || '')}</p>${fileUrl ? `<a href="${escapeHtml(fileUrl)}">${escapeHtml(message.fileName || 'Download file')}</a>` : ''}${message.link ? `<a href="${escapeHtml(message.link)}">Open source</a>` : ''}</article>`;
+    }).join('');
+
     const html = `<!doctype html><meta charset="utf-8"><title>${escapeHtml(active.title || 'Chat export')}</title><style>body{font:16px system-ui;max-width:800px;margin:auto;padding:30px}article{border-bottom:1px solid #ddd;padding:16px}time{float:right;color:#777}a{display:block}</style><h1>${escapeHtml(active.title || 'Conversation')}</h1>${body}`;
     const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     const anchor = document.createElement('a');
@@ -297,14 +357,22 @@ function App() {
           </div>
           <button title="New conversation" onClick={() => setShowNew(true)}><Plus /></button>
         </header>
+
         <div className="search">
           <Search />
           <input placeholder="Search chats" value={query} onChange={(event) => setQuery(event.target.value)} />
         </div>
+
         <div className="chat-list">
           {filtered.map((chat) => (
-            <button key={chat.id} className={active?.id === chat.id ? 'chat active' : 'chat'} onClick={() => openChat(chat)}>
-              <span className="avatar">{chat.type === 'group' ? <Users /> : chat.type === 'rss' ? <Archive /> : (chat.title || 'C')[0]}</span>
+            <button
+              key={chat.id}
+              className={active?.id === chat.id ? 'chat active' : 'chat'}
+              onClick={() => openChat(chat)}
+            >
+              <span className="avatar">
+                {chat.type === 'group' ? <Users /> : chat.type === 'rss' ? <Archive /> : (chat.title || 'C')[0]}
+              </span>
               <span>
                 <b>{chat.title || `${chat.type} chat`}</b>
                 <small>{chat.type === 'rss' ? 'Refreshes when opened' : 'Open conversation'}</small>
@@ -312,6 +380,7 @@ function App() {
             </button>
           ))}
         </div>
+
         <footer>
           <span className={`dot ${status}`} />
           <span>{status}</span>
@@ -331,11 +400,21 @@ function App() {
               <div className="head-actions">
                 <button title="Export HTML" onClick={exportHtml}><Archive /></button>
                 <div className="conversation-actions" ref={actionsRef}>
-                  <button title="Conversation actions" aria-haspopup="menu" aria-expanded={showActions} onClick={() => setShowActions((current) => !current)}><MoreVertical /></button>
+                  <button
+                    title="Conversation actions"
+                    aria-haspopup="menu"
+                    aria-expanded={showActions}
+                    onClick={() => setShowActions((current) => !current)}
+                  >
+                    <MoreVertical />
+                  </button>
                   {showActions && (
                     <div className="conversation-menu" role="menu">
                       <button role="menuitem" onClick={refreshActiveChat}><RefreshCw />Refresh</button>
-                      <button className="danger" role="menuitem" onClick={hideActiveChat}><Trash2 />{active.type === 'rss' ? 'Remove RSS channel' : 'Hide conversation'}</button>
+                      <button className="danger" role="menuitem" onClick={hideActiveChat}>
+                        <Trash2 />
+                        {active.type === 'rss' ? 'Remove RSS channel' : 'Hide conversation'}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -343,27 +422,62 @@ function App() {
             </header>
 
             <section className="messages">
-              {messages.map((message, index) => (
-                <div key={message.id || message.clientId || index} className={`bubble ${message.senderId === user.id ? 'mine' : ''}`}>
-                  <p>{message.body || message.title}</p>
-                  {message.mimeType?.startsWith('image/') && message.fileUrl && <img src={message.fileUrl} alt={message.fileName || 'Shared file'} />}
-                  {message.mimeType?.startsWith('video/') && message.fileUrl && <video controls src={message.fileUrl} />}
-                  {message.type === 'voice' && message.fileUrl && <audio controls src={message.fileUrl} />}
-                  {message.fileExpired && <small>File expired</small>}
-                  {message.fileUrl && !message.mimeType?.match(/^(image|video|audio)\//) && <a href={message.fileUrl}>{message.fileName || 'Download file'}</a>}
-                  {message.link && <a target="_blank" rel="noreferrer" href={message.link}>Open article</a>}
-                  <time>{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} {message.status && `· ${message.status}`}</time>
-                </div>
-              ))}
+              {messages.map((message, index) => {
+                const fileUrl = resolveAssetUrl(message.fileUrl);
+                return (
+                  <div
+                    key={message.id || message.clientId || index}
+                    className={`bubble ${message.senderId === user.id ? 'mine' : ''}`}
+                  >
+                    <p>{message.body || message.title}</p>
+                    {message.mimeType?.startsWith('image/') && fileUrl && <img src={fileUrl} alt={message.fileName || 'Shared file'} />}
+                    {message.mimeType?.startsWith('video/') && fileUrl && <video controls src={fileUrl} />}
+                    {message.type === 'voice' && fileUrl && <audio controls src={fileUrl} />}
+                    {message.fileExpired && <small>File expired</small>}
+                    {fileUrl && !message.mimeType?.match(/^(image|video|audio)\//) && <a href={fileUrl}>{message.fileName || 'Download file'}</a>}
+                    {message.link && <a target="_blank" rel="noreferrer" href={message.link}>Open article</a>}
+                    <time>
+                      {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {' '}{message.status && `· ${message.status}`}
+                    </time>
+                  </div>
+                );
+              })}
             </section>
 
             {active.type !== 'rss' && (
               <footer className="composer">
-                <input ref={file} type="file" hidden onChange={(event) => { const selected = event.target.files?.[0]; if (selected) uploadFile(selected, selected.name); event.target.value = ''; }} />
+                <input
+                  ref={file}
+                  type="file"
+                  hidden
+                  onChange={(event) => {
+                    const selected = event.target.files?.[0];
+                    if (selected) uploadFile(selected, selected.name);
+                    event.target.value = '';
+                  }}
+                />
                 <button onClick={() => file.current?.click()}><FileUp /></button>
                 <button onClick={() => setEmoji(!emoji)}><Smile /></button>
-                {emoji && <div className="emoji"><EmojiPicker onEmojiClick={(selectedEmoji) => { setText((current) => current + selectedEmoji.emoji); setEmoji(false); }} /></div>}
-                <textarea placeholder={status === 'offline' ? 'Write a message — it will be queued' : 'Write a message'} value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); } }} />
+                {emoji && (
+                  <div className="emoji">
+                    <EmojiPicker onEmojiClick={(selectedEmoji) => {
+                      setText((current) => current + selectedEmoji.emoji);
+                      setEmoji(false);
+                    }} />
+                  </div>
+                )}
+                <textarea
+                  placeholder={status === 'offline' ? 'Write a message — it will be queued' : 'Write a message'}
+                  value={text}
+                  onChange={(event) => setText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      send();
+                    }
+                  }}
+                />
                 <button className={recorder.current ? 'recording' : ''} onClick={voice}><Mic /></button>
                 <button className="send" onClick={send}><Send /></button>
               </footer>
@@ -378,7 +492,12 @@ function App() {
         )}
       </main>
 
-      {showNew && <NewChat onClose={() => setShowNew(false)} onCreated={() => { setShowNew(false); loadChats(); }} />}
+      {showNew && (
+        <NewChat
+          onClose={() => setShowNew(false)}
+          onCreated={handleChatCreated}
+        />
+      )}
     </div>
   );
 }
@@ -417,26 +536,42 @@ function NewChat({ onClose, onCreated }) {
 
     try {
       setBusy(true);
+      let data;
+
       if (type === 'direct') {
         if (!selectedUser) throw new Error('Select a user first');
-        await api('/api/chats/direct', { method: 'POST', body: JSON.stringify({ userId: selectedUser.id }) });
+        data = await api('/api/chats/direct', {
+          method: 'POST',
+          body: JSON.stringify({ userId: selectedUser.id }),
+        });
       } else if (type === 'group') {
         if (!selectedUser) throw new Error('Select at least one member');
         if (!title.trim()) throw new Error('Enter a group title');
-        await api('/api/chats/group', { method: 'POST', body: JSON.stringify({ title: title.trim(), memberIds: [selectedUser.id] }) });
+        data = await api('/api/chats/group', {
+          method: 'POST',
+          body: JSON.stringify({ title: title.trim(), memberIds: [selectedUser.id] }),
+        });
       } else {
         const feedUrl = rss.trim();
         if (!feedUrl) throw new Error('Enter an RSS or Atom feed URL');
+
         let parsedUrl;
         try {
           parsedUrl = new URL(feedUrl);
         } catch {
           throw new Error('Enter a valid RSS or Atom feed URL');
         }
-        if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('RSS URL must use http or https');
-        await api('/api/chats/rss', { method: 'POST', body: JSON.stringify({ title: title.trim(), url: parsedUrl.toString() }) });
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          throw new Error('RSS URL must use http or https');
+        }
+
+        data = await api('/api/chats/rss', {
+          method: 'POST',
+          body: JSON.stringify({ title: title.trim(), url: parsedUrl.toString() }),
+        });
       }
-      onCreated();
+
+      await onCreated(data?.chat);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -451,29 +586,65 @@ function NewChat({ onClose, onCreated }) {
           <h3>New conversation</h3>
           <button title="Close" onClick={onClose}><X /></button>
         </header>
+
         <div className="tabs">
           {['direct', 'group', 'rss'].map((item) => (
-            <button key={item} className={type === item ? 'active' : ''} onClick={() => { setType(item); setError(''); }}>{item}</button>
+            <button
+              key={item}
+              className={type === item ? 'active' : ''}
+              onClick={() => {
+                setType(item);
+                setError('');
+              }}
+            >
+              {item}
+            </button>
           ))}
         </div>
 
         {type === 'rss' ? (
           <>
-            <input placeholder="Channel title (optional)" value={title} onChange={(event) => setTitle(event.target.value)} />
-            <input type="url" inputMode="url" placeholder="https://example.com/feed.xml" value={rss} onChange={(event) => setRss(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') create(); }} />
+            <input
+              placeholder="Channel title (optional)"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+            <input
+              type="url"
+              inputMode="url"
+              placeholder="https://example.com/feed.xml"
+              value={rss}
+              onChange={(event) => setRss(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') create(); }}
+            />
             {error && <p className="error">{error}</p>}
-            <button className="primary" disabled={busy} onClick={() => create()}>{busy ? 'Checking feed…' : 'Add RSS channel'}</button>
+            <button className="primary" disabled={busy} onClick={() => create()}>
+              {busy ? 'Checking feed…' : 'Add RSS channel'}
+            </button>
           </>
         ) : (
           <>
-            <input placeholder="Search username or mobile" value={query} onChange={(event) => setQuery(event.target.value)} />
-            {type === 'group' && <input placeholder="Group title" value={title} onChange={(event) => setTitle(event.target.value)} />}
+            <input
+              placeholder="Search username or mobile"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            {type === 'group' && (
+              <input
+                placeholder="Group title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            )}
             {error && <p className="error">{error}</p>}
             <div className="results">
               {users.map((candidate) => (
                 <button key={candidate.id} disabled={busy} onClick={() => create(candidate)}>
                   <span className="avatar">{candidate.username[0]}</span>
-                  <span><b>{candidate.displayName || candidate.username}</b><small>@{candidate.username} · {candidate.mobile}</small></span>
+                  <span>
+                    <b>{candidate.displayName || candidate.username}</b>
+                    <small>@{candidate.username} · {candidate.mobile}</small>
+                  </span>
                 </button>
               ))}
             </div>
