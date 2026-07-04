@@ -1,4 +1,7 @@
 FROM node:22-bookworm-slim AS build
+
+RUN npm config set registry https://package-mirror.liara.ir/repository/npm/ --global
+
 WORKDIR /app
 COPY . .
 RUN test -d /app/node_modules
