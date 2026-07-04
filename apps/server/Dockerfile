@@ -8,16 +8,12 @@ COPY package*.json ./
 COPY .npmrc ./
 COPY apps/server/package.json apps/server/package.json
 COPY apps/client/package.json apps/client/package.json
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 make g++ \
-    && npm install --omit=dev -w @verdant/server --no-audit --no-fund \
-    && apt-get purge -y --auto-remove python3 make g++ \
-    && rm -rf /var/lib/apt/lists/* /root/.npm
-
+COPY node_modules ./node_modules
 COPY apps/server apps/server
 
-RUN mkdir -p /app/data /app/storage/uploads
+RUN test -d /app/node_modules \
+    && node -e "require.resolve('express'); require.resolve('better-sqlite3'); require.resolve('drizzle-orm')" \
+    && mkdir -p /app/data /app/storage/uploads
 
 EXPOSE 3001
 
