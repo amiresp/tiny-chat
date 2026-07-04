@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.git
+.github
+.env
+*.log
+apps/client/dist
+apps/client/release
+apps/client/android
+storage/uploads
