@@ -1,0 +1,40 @@
+name: Validate application
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Install dependencies
+        env:
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+        run: npm install --include=dev --no-audit --no-fund
+
+      - name: Validate server modules
+        run: |
+          node --check apps/server/src/index.js
+          node --check apps/server/src/start.js
+          node --check apps/server/src/feature-patch.js
+          node --check apps/server/src/rss-patch.js
+
+      - name: Build web client
+        run: npm run build -w @verdant/client
