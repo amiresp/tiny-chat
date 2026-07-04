@@ -10,6 +10,8 @@ FALLBACK_NPM_REGISTRY="${FALLBACK_NPM_REGISTRY:-https://registry.npmjs.org/}"
 FORCE_INSTALL="${FORCE_INSTALL:-0}"
 DEPENDENCY_MARKER="node_modules/.verdant-node22-linux"
 NPM_CACHE_DIR="$ROOT_DIR/.npm-cache"
+DEPENDENCY_ARCHIVE="$ROOT_DIR/tiny-chat-node-modules-linux-node22.tar.gz"
+DEPENDENCY_CHECKSUM="$DEPENDENCY_ARCHIVE.sha256"
 
 has_dependencies() {
   [[ -d node_modules ]] \
@@ -40,12 +42,30 @@ install_dependencies() {
     bash -lc 'node --version && npm --version && npm install --include=dev --no-audit --no-fund'
 }
 
+extract_dependency_archive() {
+  echo "Found Linux Node 22 dependency artifact; extracting it..."
+
+  if [[ -f "$DEPENDENCY_CHECKSUM" ]]; then
+    sha256sum -c "$DEPENDENCY_CHECKSUM"
+  fi
+
+  rm -rf node_modules package-lock.json
+  tar -xzf "$DEPENDENCY_ARCHIVE"
+
+  has_dependencies || {
+    echo "The downloaded dependency artifact is invalid or incomplete." >&2
+    exit 1
+  }
+}
+
 mkdir -p "$NPM_CACHE_DIR"
 
 if [[ "$FORCE_INSTALL" != "1" ]] && has_dependencies; then
   echo "Compatible node_modules exists; skipping dependency download."
+elif [[ "$FORCE_INSTALL" != "1" ]] && [[ -f "$DEPENDENCY_ARCHIVE" ]]; then
+  extract_dependency_archive
 else
-  echo "node_modules is missing, incomplete, or incompatible; installing with Node 22 inside Docker..."
+  echo "node_modules and dependency artifact are unavailable; installing with Node 22 inside Docker..."
   rm -rf node_modules
 
   if ! install_dependencies "$PRIMARY_NPM_REGISTRY"; then
