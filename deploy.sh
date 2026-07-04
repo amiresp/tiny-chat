@@ -7,18 +7,20 @@ cd "$ROOT_DIR"
 NODE_IMAGE="${NODE_IMAGE:-node:22-bookworm}"
 NPM_REGISTRY="${NPM_REGISTRY:-https://package-mirror.liara.ir/repository/npm/}"
 FORCE_INSTALL="${FORCE_INSTALL:-0}"
+DEPENDENCY_MARKER="node_modules/.verdant-node22-linux"
 
 has_dependencies() {
   [[ -d node_modules ]] \
+    && [[ -f "$DEPENDENCY_MARKER" ]] \
     && [[ -x node_modules/.bin/vite ]] \
     && [[ -f node_modules/better-sqlite3/package.json ]] \
     && [[ -f node_modules/argon2/package.json ]]
 }
 
 if [[ "$FORCE_INSTALL" != "1" ]] && has_dependencies; then
-  echo "node_modules exists; skipping dependency download."
+  echo "Compatible node_modules exists; skipping dependency download."
 else
-  echo "node_modules is missing or incomplete; installing into the project directory..."
+  echo "node_modules is missing, incomplete, or incompatible; installing with Node 22 inside Docker..."
   rm -rf node_modules
 
   docker run --rm \
@@ -28,10 +30,10 @@ else
     -v "$ROOT_DIR:/app" \
     -w /app \
     "$NODE_IMAGE" \
-    bash -lc 'npm install --include=dev --no-audit --no-fund'
+    bash -lc 'node --version && npm --version && npm install --include=dev --no-audit --no-fund && touch node_modules/.verdant-node22-linux'
 
   has_dependencies || {
-    echo "Dependency installation did not create a valid node_modules directory." >&2
+    echo "Dependency installation did not create a valid Linux Node 22 node_modules directory." >&2
     exit 1
   }
 fi
