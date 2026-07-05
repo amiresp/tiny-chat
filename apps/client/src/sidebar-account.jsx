@@ -1,5 +1,5 @@
 import React from 'react';
-import { CircleUserRound, ShieldCheck } from 'lucide-react';
+import { CircleUserRound } from 'lucide-react';
 import { apiOrigin } from './runtime';
 import './sidebar-extra.css';
 
@@ -9,20 +9,13 @@ function resolveImage(value) {
   return value.startsWith('/') ? `${apiOrigin}${value}` : value;
 }
 
-export function SidebarAccount({ user, onProfile, onAdmin }) {
+export function SidebarAccount({ user, onOpen }) {
   const source = resolveImage(user?.avatarUrl);
   const label = user?.displayName || user?.username || 'Profile';
 
   return (
-    <div className="sidebar-account">
-      {user?.role === 'admin' && (
-        <button className="sidebar-admin-button" title="Administration" onClick={onAdmin}>
-          <ShieldCheck />
-        </button>
-      )}
-      <button className="sidebar-profile-button" title="Profile" onClick={onProfile}>
-        {source ? <img src={source} alt={label} /> : <CircleUserRound />}
-      </button>
-    </div>
+    <button className="sidebar-profile-button" title="Account menu" onClick={onOpen}>
+      {source ? <img src={source} alt={label} /> : <CircleUserRound />}
+    </button>
   );
 }
