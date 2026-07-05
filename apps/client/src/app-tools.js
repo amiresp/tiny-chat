@@ -1,3 +1,29 @@
+function showInAppToast({ title, body, icon }) {
+  const existing = document.querySelector('.verdant-notification-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('button');
+  toast.className = 'verdant-notification-toast';
+  toast.type = 'button';
+  toast.innerHTML = `
+    <img src="${icon || '/icon.svg'}" alt="">
+    <span>
+      <strong>${String(title || 'New message').replace(/[&<>"']/g, '')}</strong>
+      <small>${String(body || 'You have a new message.').replace(/[&<>"']/g, '')}</small>
+    </span>
+  `;
+  toast.addEventListener('click', () => {
+    window.focus();
+    toast.remove();
+  });
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('visible'));
+  window.setTimeout(() => {
+    toast.classList.remove('visible');
+    window.setTimeout(() => toast.remove(), 220);
+  }, 5000);
+}
+
 export function notificationState() {
   if (!('Notification' in window)) return 'unsupported';
   return Notification.permission;
@@ -5,20 +31,22 @@ export function notificationState() {
 
 export async function enableNotifications() {
   if (!('Notification' in window)) {
-    throw new Error('Notifications are not supported on this device.');
+    throw new Error('System notifications are not supported on this device. In-app alerts will still work.');
   }
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     throw new Error(permission === 'denied'
-      ? 'Notifications are blocked in browser settings.'
-      : 'Notification permission was not granted.');
+      ? 'Notifications are blocked in browser settings. In-app alerts remain enabled.'
+      : 'Notification permission was not granted. In-app alerts remain enabled.');
   }
 
   return permission;
 }
 
 export async function showIncomingNotification({ title, body, icon, tag }) {
+  showInAppToast({ title, body, icon });
+
   if (!('Notification' in window) || Notification.permission !== 'granted') return false;
 
   const options = {
