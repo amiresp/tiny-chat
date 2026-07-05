@@ -1,3 +1,5 @@
+import './notification-toast.css';
+
 function showInAppToast({ title, body, icon }) {
   const existing = document.querySelector('.verdant-notification-toast');
   if (existing) existing.remove();
