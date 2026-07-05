@@ -1,17 +1,32 @@
 services:
+  deps:
+    image: node:22-bookworm-slim
+    working_dir: /app
+    environment:
+      NPM_CONFIG_REGISTRY: https://package-mirror.liara.ir/repository/npm/
+      FALLBACK_NPM_REGISTRY: https://registry.npmjs.org/
+    volumes:
+      - .:/app
+      - npm-cache:/root/.npm
+    command: ["bash", "/app/scripts/ensure-deps.sh"]
+    restart: "no"
+
   server:
-    build:
-      context: .
-      dockerfile: apps/server/Dockerfile
-      args:
-        DEPS_IMAGE: ${DEPS_IMAGE:-tiny-chat-deps:node22}
+    image: node:22-bookworm-slim
+    working_dir: /app
     env_file:
       - .env
+    command: ["npm", "run", "dev", "-w", "@verdant/server"]
     expose:
       - "9997"
     volumes:
+      - .:/app
       - verdant-data:/app/data
       - verdant-uploads:/app/storage/uploads
+      - npm-cache:/root/.npm
+    depends_on:
+      deps:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -27,18 +42,37 @@ services:
       - internal
 
   web:
-    build:
-      context: .
-      dockerfile: apps/client/Dockerfile
-      args:
-        DEPS_IMAGE: ${DEPS_IMAGE:-tiny-chat-deps:node22}
+    image: node:22-bookworm-slim
+    working_dir: /app
+    environment:
+      VITE_PROXY_TARGET: http://server:9997
+    command:
+      - npm
+      - run
+      - dev
+      - -w
+      - "@verdant/client"
+      - --
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5173"
     expose:
-      - "80"
+      - "5173"
+    volumes:
+      - .:/app
+      - npm-cache:/root/.npm
     depends_on:
+      deps:
+        condition: service_completed_successfully
       server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5173/').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
       interval: 10s
       timeout: 5s
       retries: 5
@@ -50,7 +84,7 @@ services:
       - traefik.http.routers.tiny-chat.rule=Host(`chat.evaonline.ir`)
       - traefik.http.routers.tiny-chat.entrypoints=websecure
       - traefik.http.routers.tiny-chat.tls=true
-      - traefik.http.services.tiny-chat.loadbalancer.server.port=80
+      - traefik.http.services.tiny-chat.loadbalancer.server.port=5173
     networks:
       - internal
       - proxy
@@ -58,6 +92,7 @@ services:
 volumes:
   verdant-data:
   verdant-uploads:
+  npm-cache:
 
 networks:
   internal:
