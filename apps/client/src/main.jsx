@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { io } from 'socket.io-client';
 import EmojiPicker from 'emoji-picker-react';
@@ -6,9 +6,9 @@ import {
   Archive,
   CalendarDays,
   Check,
+  Download,
   ExternalLink,
   FileUp,
-  LogOut,
   Menu,
   Mic,
   MoreVertical,
@@ -20,6 +20,7 @@ import {
   Smile,
   Trash2,
   Users,
+  WifiOff,
   X,
 } from 'lucide-react';
 import { api, getToken, setToken } from './api';
@@ -28,7 +29,11 @@ import { cacheChats, cacheMessages, enqueue, offlineDb, queued } from './offline
 import { loadRssFeed } from './rss-client';
 import { SidebarAccount } from './sidebar-account';
 import { ErrorBoundary } from './error-boundary';
+import { AccountMenu } from './account-menu';
+import { MobileNav } from './mobile-nav';
+import { showIncomingNotification } from './app-tools';
 import './styles.css';
+import './mobile-ui.css';
 
 function resolveAssetUrl(value) {
   if (!value) return value;
@@ -46,7 +51,7 @@ function initials(entity) {
 }
 
 function formatPresence(peer) {
-  if (!peer) return 'Open conversation';
+  if (!peer) return '';
   if (peer.isOnline) return 'online';
   if (peer.hidePresence) return 'last seen hidden';
   if (!peer.lastSeenAt) return 'offline';
@@ -64,7 +69,13 @@ function Avatar({ entity, icon, className = '' }) {
   const source = resolveAssetUrl(entity?.avatarUrl);
   return (
     <span className={`avatar ${className}`}>
-      {source ? <img src={source} alt={displayName(entity)} onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : icon || initials(entity)}
+      {source ? (
+        <img
+          src={source}
+          alt={displayName(entity)}
+          onError={(event) => { event.currentTarget.style.display = 'none'; }}
+        />
+      ) : icon || initials(entity)}
     </span>
   );
 }
@@ -78,6 +89,21 @@ function applyOnlineIds(setChats, onlineUserIds = []) {
   )));
 }
 
+function ConnectionNotice({ status }) {
+  if (status === 'connected') return null;
+
+  return (
+    <div className={`connection-notice ${status}`}>
+      <WifiOff />
+      <span>
+        {status === 'offline'
+          ? 'Disconnected. New messages will be queued.'
+          : 'Updating connection…'}
+      </span>
+    </div>
+  );
+}
+
 function Auth({ onDone }) {
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ username: '', mobile: '', identity: '', password: '' });
@@ -87,7 +113,10 @@ function Auth({ onDone }) {
     event.preventDefault();
     try {
       setError('');
-      const data = await api(`/api/auth/${mode}`, { method: 'POST', body: JSON.stringify(form) });
+      const data = await api(`/api/auth/${mode}`, {
+        method: 'POST',
+        body: JSON.stringify(form),
+      });
       setToken(data.token);
       onDone(data.user);
     } catch (requestError) {
@@ -98,16 +127,26 @@ function Auth({ onDone }) {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="brand"><img src="/icon.svg" alt="Verdant" /><div><b>Verdant</b><span>Calm conversations, everywhere.</span></div></div>
+        <div className="brand">
+          <img src="/icon.svg" alt="Verdant" />
+          <div><b>Verdant</b><span>Calm conversations, everywhere.</span></div>
+        </div>
         <h1>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
         <form onSubmit={submit}>
-          {mode === 'register' && <><label>Username<input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} /></label><label>Mobile number<input value={form.mobile} onChange={(event) => setForm({ ...form, mobile: event.target.value })} /></label></>}
+          {mode === 'register' && (
+            <>
+              <label>Username<input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} /></label>
+              <label>Mobile number<input value={form.mobile} onChange={(event) => setForm({ ...form, mobile: event.target.value })} /></label>
+            </>
+          )}
           {mode === 'login' && <label>Username or mobile<input value={form.identity} onChange={(event) => setForm({ ...form, identity: event.target.value })} /></label>}
           <label>Password<input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
           {error && <p className="error">{error}</p>}
           <button className="primary">{mode === 'login' ? 'Sign in' : 'Register'}</button>
         </form>
-        <button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Create an account' : 'Already have an account?'}</button>
+        <button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+          {mode === 'login' ? 'Create an account' : 'Already have an account?'}
+        </button>
       </section>
     </main>
   );
@@ -122,14 +161,22 @@ function RssShareModal({ chat, onClose }) {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (query.trim().length < 2) { setUsers([]); return undefined; }
+    if (query.trim().length < 2) {
+      setUsers([]);
+      return undefined;
+    }
+
     let cancelled = false;
     const timer = setTimeout(() => {
       api(`/api/users/search?q=${encodeURIComponent(query.trim())}`)
         .then((data) => { if (!cancelled) setUsers(data.users || []); })
         .catch((requestError) => { if (!cancelled) setError(requestError.message); });
     }, 250);
-    return () => { cancelled = true; clearTimeout(timer); };
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query]);
 
   function toggleUser(userId) {
@@ -146,7 +193,10 @@ function RssShareModal({ chat, onClose }) {
       setBusy(true);
       setError('');
       setSuccess('');
-      const data = await api(`/api/v2/chats/${chat.id}/share`, { method: 'POST', body: JSON.stringify(payload) });
+      const data = await api(`/api/v2/chats/${chat.id}/share`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
       setSuccess(`Shared with ${data.sharedCount} user${data.sharedCount === 1 ? '' : 's'}.`);
       setSelected(new Set());
     } catch (requestError) {
@@ -159,16 +209,27 @@ function RssShareModal({ chat, onClose }) {
   return (
     <div className="modal" role="dialog" aria-modal="true">
       <section className="share-modal">
-        <header><div><h3>Share RSS channel</h3><small>{chat.title}</small></div><button onClick={onClose}><X /></button></header>
+        <header>
+          <div><h3>Share RSS channel</h3><small>{chat.title}</small></div>
+          <button onClick={onClose}><X /></button>
+        </header>
         <button className="share-everyone" disabled={busy} onClick={() => share({ all: true })}><Users />Share with everyone</button>
         <div className="modal-divider"><span>or choose users</span></div>
         <div className="search share-search"><Search /><input placeholder="Search users" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
         <div className="share-users">
-          {users.map((candidate) => <button key={candidate.id} className={selected.has(candidate.id) ? 'selected' : ''} onClick={() => toggleUser(candidate.id)}><Avatar entity={candidate} /><span><b>{candidate.displayName || candidate.username}</b><small>@{candidate.username}</small></span><span className="share-check">{selected.has(candidate.id) && <Check />}</span></button>)}
+          {users.map((candidate) => (
+            <button key={candidate.id} className={selected.has(candidate.id) ? 'selected' : ''} onClick={() => toggleUser(candidate.id)}>
+              <Avatar entity={candidate} />
+              <span><b>{candidate.displayName || candidate.username}</b><small>@{candidate.username}</small></span>
+              <span className="share-check">{selected.has(candidate.id) && <Check />}</span>
+            </button>
+          ))}
         </div>
         {error && <p className="error">{error}</p>}
         {success && <p className="success">{success}</p>}
-        <button className="primary" disabled={busy || selected.size === 0} onClick={() => share({ userIds: [...selected] })}>Share with selected ({selected.size})</button>
+        <button className="primary" disabled={busy || selected.size === 0} onClick={() => share({ userIds: [...selected] })}>
+          Share with selected ({selected.size})
+        </button>
       </section>
     </div>
   );
@@ -180,12 +241,14 @@ function App() {
   const [active, setActive] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
-  const [status, setStatus] = useState(navigator.onLine ? 'connecting' : 'offline');
+  const [status, setStatus] = useState(navigator.onLine ? 'updating' : 'offline');
   const [emoji, setEmoji] = useState(false);
   const [query, setQuery] = useState('');
   const [showNew, setShowNew] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showFab, setShowFab] = useState(true);
   const [feedError, setFeedError] = useState('');
 
   const socket = useRef(null);
@@ -194,10 +257,17 @@ function App() {
   const chunks = useRef([]);
   const actionsRef = useRef(null);
   const activeIdRef = useRef(null);
+  const chatsRef = useRef([]);
+  const chatListRef = useRef(null);
 
   const activeChat = chats.find((chat) => chat.id === active?.id) || active;
+  const unreadTotal = useMemo(
+    () => chats.reduce((total, chat) => total + Number(chat.unreadCount || 0), 0),
+    [chats],
+  );
 
   useEffect(() => { activeIdRef.current = active?.id ?? null; }, [active?.id]);
+  useEffect(() => { chatsRef.current = chats; }, [chats]);
 
   useEffect(() => {
     if (!getToken()) return;
@@ -208,6 +278,7 @@ function App() {
     if (!user) return undefined;
 
     let stopped = false;
+
     async function heartbeat() {
       try {
         const [presenceData, userData] = await Promise.all([
@@ -224,7 +295,12 @@ function App() {
     }
 
     loadChats().then(heartbeat);
-    const currentSocket = io(socketOrigin, { auth: { token: getToken() } });
+    const currentSocket = io(socketOrigin, {
+      auth: { token: getToken() },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+    });
     socket.current = currentSocket;
 
     currentSocket.on('connect', () => {
@@ -232,7 +308,8 @@ function App() {
       flush(currentSocket);
       heartbeat();
     });
-    currentSocket.on('disconnect', () => setStatus(navigator.onLine ? 'connecting' : 'offline'));
+    currentSocket.on('disconnect', () => setStatus(navigator.onLine ? 'updating' : 'offline'));
+    currentSocket.on('connect_error', () => setStatus(navigator.onLine ? 'updating' : 'offline'));
     currentSocket.on('presence', ({ userId, status: presenceStatus, lastSeenAt }) => {
       setChats((current) => current.map((chat) => Number(chat.peer?.id) === Number(userId)
         ? { ...chat, peer: { ...chat.peer, isOnline: presenceStatus === 'online', lastSeenAt: lastSeenAt || chat.peer.lastSeenAt } }
@@ -244,14 +321,34 @@ function App() {
     });
     currentSocket.on('message:new', (message) => {
       const isActive = Number(activeIdRef.current) === Number(message.chatId);
+      const relatedChat = chatsRef.current.find((chat) => Number(chat.id) === Number(message.chatId));
+
+      if (message.senderId !== user.id && (!isActive || document.hidden)) {
+        showIncomingNotification({
+          title: relatedChat?.title || 'New message',
+          body: message.body || message.fileName || 'A new attachment was sent.',
+          icon: resolveAssetUrl(relatedChat?.avatarUrl) || '/icon.svg',
+          tag: `chat-${message.chatId}`,
+        }).catch(() => {});
+      }
+
       if (isActive) {
         setMessages((current) => [...current.filter((item) => item.clientId !== message.clientId), message]);
-        if (message.senderId !== user.id && message.id) currentSocket.emit('message:read', { chatId: message.chatId, messageIds: [message.id] });
+        if (message.senderId !== user.id && message.id) {
+          currentSocket.emit('message:read', { chatId: message.chatId, messageIds: [message.id] });
+        }
       }
+
       setChats((current) => {
         const found = current.find((chat) => Number(chat.id) === Number(message.chatId));
         if (!found) return current;
-        const updated = { ...found, updatedAt: message.createdAt || new Date().toISOString(), unreadCount: isActive || message.senderId === user.id ? 0 : Number(found.unreadCount || 0) + 1 };
+        const updated = {
+          ...found,
+          updatedAt: message.createdAt || new Date().toISOString(),
+          unreadCount: isActive || message.senderId === user.id
+            ? 0
+            : Number(found.unreadCount || 0) + 1,
+        };
         return [updated, ...current.filter((chat) => Number(chat.id) !== Number(message.chatId))];
       });
     });
@@ -260,7 +357,7 @@ function App() {
       await loadChats();
       await heartbeat();
     }, 20000);
-    const onlineHandler = () => setStatus(currentSocket.connected ? 'connected' : 'connecting');
+    const onlineHandler = () => setStatus(currentSocket.connected ? 'connected' : 'updating');
     const offlineHandler = () => setStatus('offline');
     addEventListener('online', onlineHandler);
     addEventListener('offline', offlineHandler);
@@ -276,7 +373,9 @@ function App() {
 
   useEffect(() => {
     if (!showActions) return undefined;
-    function closeActions(event) { if (!actionsRef.current?.contains(event.target)) setShowActions(false); }
+    function closeActions(event) {
+      if (!actionsRef.current?.contains(event.target)) setShowActions(false);
+    }
     document.addEventListener('pointerdown', closeActions);
     return () => document.removeEventListener('pointerdown', closeActions);
   }, [showActions]);
@@ -285,7 +384,9 @@ function App() {
     try {
       const data = await api('/api/v2/chats');
       setChats(data.chats);
-      setActive((current) => current ? data.chats.find((chat) => chat.id === current.id) || current : current);
+      setActive((current) => current
+        ? data.chats.find((chat) => chat.id === current.id) || current
+        : current);
       await cacheChats(data.chats);
       return data.chats;
     } catch {
@@ -296,9 +397,15 @@ function App() {
   }
 
   async function markRead(chatId, list) {
-    const ids = list.filter((message) => message.id && message.senderId !== user.id).map((message) => Number(message.id));
-    setChats((current) => current.map((chat) => Number(chat.id) === Number(chatId) ? { ...chat, unreadCount: 0 } : chat));
-    if (ids.length && socket.current) socket.current.emit('message:read', { chatId, messageIds: ids });
+    const ids = list
+      .filter((message) => message.id && message.senderId !== user.id)
+      .map((message) => Number(message.id));
+    setChats((current) => current.map((chat) => Number(chat.id) === Number(chatId)
+      ? { ...chat, unreadCount: 0 }
+      : chat));
+    if (ids.length && socket.current) {
+      socket.current.emit('message:read', { chatId, messageIds: ids });
+    }
   }
 
   async function openChat(chat) {
@@ -306,9 +413,12 @@ function App() {
     setShowNew(false);
     setShowActions(false);
     setShowShare(false);
+    setShowAccountMenu(false);
     setFeedError('');
     setMessages([]);
-    setChats((current) => current.map((item) => item.id === chat.id ? { ...item, unreadCount: 0 } : item));
+    setChats((current) => current.map((item) => item.id === chat.id
+      ? { ...item, unreadCount: 0 }
+      : item));
 
     try {
       if (chat.type === 'rss') {
@@ -340,10 +450,15 @@ function App() {
     loadChats().catch(() => {});
   }
 
-  async function refreshActiveChat() { if (activeChat) await openChat(activeChat); }
+  async function refreshActiveChat() {
+    if (activeChat) await openChat(activeChat);
+  }
 
   async function hideActiveChat() {
-    if (!activeChat || !window.confirm(activeChat.type === 'rss' ? 'Remove this RSS channel?' : 'Hide this conversation?')) return;
+    if (!activeChat || !window.confirm(activeChat.type === 'rss'
+      ? 'Remove this RSS channel?'
+      : 'Hide this conversation?')) return;
+
     try {
       await api(`/api/chats/${activeChat.id}`, { method: 'DELETE' });
       setChats((current) => current.filter((item) => item.id !== activeChat.id));
@@ -359,7 +474,9 @@ function App() {
     for (const message of await queued()) {
       await offlineDb.outbox.update(message.clientId, { status: 'sending' });
       currentSocket.emit('message:send', message, async (result) => {
-        await offlineDb.outbox.update(message.clientId, { status: result.ok ? 'sent' : 'failed' });
+        await offlineDb.outbox.update(message.clientId, {
+          status: result.ok ? 'sent' : 'failed',
+        });
         if (result.ok) await offlineDb.outbox.delete(message.clientId);
       });
     }
@@ -367,7 +484,14 @@ function App() {
 
   async function send() {
     if (!text.trim() || !activeChat) return;
-    const message = { clientId: crypto.randomUUID(), chatId: activeChat.id, body: text.trim(), senderId: user.id, createdAt: new Date().toISOString(), status: status === 'connected' ? 'sending' : 'queued' };
+    const message = {
+      clientId: crypto.randomUUID(),
+      chatId: activeChat.id,
+      body: text.trim(),
+      senderId: user.id,
+      createdAt: new Date().toISOString(),
+      status: status === 'connected' ? 'sending' : 'queued',
+    };
     setMessages((current) => [...current, message]);
     setText('');
     await enqueue(message);
@@ -376,13 +500,21 @@ function App() {
 
   async function uploadFile(blob, name, type = 'file') {
     if (!activeChat) return;
-    if (blob.size > 50 * 1024 * 1024) { setFeedError('Maximum file size is 50 MB'); return; }
+    if (blob.size > 50 * 1024 * 1024) {
+      setFeedError('Maximum file size is 50 MB');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('file', blob, name);
     formData.append('clientId', crypto.randomUUID());
     formData.append('type', type);
+
     try {
-      await api(`/api/chats/${activeChat.id}/files`, { method: 'POST', body: formData });
+      await api(`/api/chats/${activeChat.id}/files`, {
+        method: 'POST',
+        body: formData,
+      });
       await openChat(activeChat);
     } catch (requestError) {
       setFeedError(requestError.message);
@@ -390,13 +522,25 @@ function App() {
   }
 
   async function voice() {
-    if (recorder.current) { recorder.current.stop(); recorder.current = null; return; }
+    if (recorder.current) {
+      recorder.current.stop();
+      recorder.current = null;
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       chunks.current = [];
       mediaRecorder.ondataavailable = (event) => chunks.current.push(event.data);
-      mediaRecorder.onstop = () => { uploadFile(new Blob(chunks.current, { type: 'audio/webm' }), `voice-${Date.now()}.webm`, 'voice'); stream.getTracks().forEach((track) => track.stop()); };
+      mediaRecorder.onstop = () => {
+        uploadFile(
+          new Blob(chunks.current, { type: 'audio/webm' }),
+          `voice-${Date.now()}.webm`,
+          'voice',
+        );
+        stream.getTracks().forEach((track) => track.stop());
+      };
       mediaRecorder.start();
       recorder.current = mediaRecorder;
     } catch (requestError) {
@@ -406,8 +550,24 @@ function App() {
 
   function exportHtml() {
     if (!activeChat) return;
-    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-    const body = messages.map((message) => `<article><b>${escapeHtml(message.senderId === user.id ? user.username : message.author || 'Member')}</b><time>${formatDate(message.createdAt)}</time><p>${escapeHtml(message.body || message.title || '')}</p>${message.imageUrl ? `<img src="${escapeHtml(message.imageUrl)}" style="max-width:100%">` : ''}${message.link ? `<a href="${escapeHtml(message.link)}">Open source</a>` : ''}</article>`).join('');
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[character]);
+
+    const body = messages.map((message) => `
+      <article>
+        <b>${escapeHtml(message.senderId === user.id ? user.username : message.author || 'Member')}</b>
+        <time>${formatDate(message.createdAt)}</time>
+        <p>${escapeHtml(message.body || message.title || '')}</p>
+        ${message.imageUrl ? `<img src="${escapeHtml(message.imageUrl)}" style="max-width:100%">` : ''}
+        ${message.link ? `<a href="${escapeHtml(message.link)}">Open source</a>` : ''}
+      </article>
+    `).join('');
+
     const html = `<!doctype html><meta charset="utf-8"><title>${escapeHtml(activeChat.title || 'Chat export')}</title><style>body{font:16px system-ui;max-width:800px;margin:auto;padding:30px}article{border-bottom:1px solid #ddd;padding:16px}time{float:right;color:#777}a{display:block}</style><h1>${escapeHtml(activeChat.title || 'Conversation')}</h1>${body}`;
     const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     const anchor = document.createElement('a');
@@ -421,9 +581,16 @@ function App() {
 
   if (!user) return <Auth onDone={setUser} />;
 
-  const filtered = chats.filter((chat) => (chat.title || chat.type).toLowerCase().includes(query.toLowerCase()));
+  const filtered = chats.filter((chat) => (chat.title || chat.type)
+    .toLowerCase()
+    .includes(query.toLowerCase()));
+
   const openProfile = () => document.querySelector('.account-user-launch')?.click();
   const openAdmin = () => document.querySelector('.account-launcher button[title="Administration"]')?.click();
+  const logout = () => {
+    setToken(null);
+    window.location.reload();
+  };
 
   return (
     <div className="app">
@@ -431,31 +598,201 @@ function App() {
         <header>
           <div className="brand compact"><img src="/icon.svg" alt="Verdant" /><b>Verdant</b></div>
           <div className="sidebar-header-actions">
-            <button title="New conversation" onClick={() => setShowNew(true)}><Plus /></button>
-            <SidebarAccount user={user} onProfile={openProfile} onAdmin={openAdmin} />
+            <button className="desktop-new-chat" title="New conversation" onClick={() => setShowNew(true)}><Plus /></button>
+            <SidebarAccount user={user} onOpen={() => setShowAccountMenu(true)} />
           </div>
         </header>
-        <div className="search"><Search /><input placeholder="Search chats" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
-        <div className="chat-list">
-          {filtered.map((chat) => <button key={chat.id} className={activeChat?.id === chat.id ? 'chat active' : 'chat'} onClick={() => openChat(chat)}><Avatar entity={chat} icon={chat.type === 'group' ? <Users /> : chat.type === 'rss' ? <Archive /> : null} /><span className="chat-copy"><b>{chat.title || `${chat.type} chat`}</b><small>{chat.type === 'direct' ? formatPresence(chat.peer) : chat.type === 'rss' ? 'RSS channel' : 'Group conversation'}</small></span>{Number(chat.unreadCount || 0) > 0 && <span className="unread-badge">{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</span>}</button>)}
+
+        <ConnectionNotice status={status} />
+
+        <div className="search">
+          <Search />
+          <input placeholder="Search chats" value={query} onChange={(event) => setQuery(event.target.value)} />
         </div>
-        <footer><span className={`dot ${status}`} /><span>{status}</span><button onClick={() => { setToken(null); location.reload(); }}><LogOut /></button></footer>
+
+        <div
+          className="chat-list"
+          ref={chatListRef}
+          onScroll={(event) => setShowFab(event.currentTarget.scrollTop <= 8)}
+        >
+          {filtered.map((chat) => (
+            <button key={chat.id} className={activeChat?.id === chat.id ? 'chat active' : 'chat'} onClick={() => openChat(chat)}>
+              <Avatar entity={chat} icon={chat.type === 'group' ? <Users /> : chat.type === 'rss' ? <Archive /> : null} />
+              <span className="chat-copy">
+                <b>{chat.title || `${chat.type} chat`}</b>
+                <small>{chat.type === 'direct'
+                  ? formatPresence(chat.peer)
+                  : chat.type === 'rss'
+                    ? 'RSS channel'
+                    : 'Group conversation'}</small>
+              </span>
+              {Number(chat.unreadCount || 0) > 0 && (
+                <span className="unread-badge">{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</span>
+              )}
+            </button>
+          ))}
+        </div>
       </aside>
 
       <main className={activeChat ? 'conversation' : 'conversation mobile-hidden'}>
-        {activeChat ? <>
-          <header className="conversation-head"><button className="mobile-back" onClick={() => setActive(null)}><Menu /></button><Avatar entity={activeChat} icon={activeChat.type === 'group' ? <Users /> : activeChat.type === 'rss' ? <Archive /> : null} className="head-avatar" /><div className="conversation-title"><b>{activeChat.title || `${activeChat.type} chat`}</b><small>{activeChat.type === 'direct' ? formatPresence(activeChat.peer) : status}</small></div><div className="head-actions"><button title="Export HTML" onClick={exportHtml}><Archive /></button><div className="conversation-actions" ref={actionsRef}><button onClick={() => setShowActions((current) => !current)}><MoreVertical /></button>{showActions && <div className="conversation-menu"><button onClick={refreshActiveChat}><RefreshCw />Refresh</button>{activeChat.type === 'rss' && (activeChat.ownerId === user.id || user.role === 'admin') && <button onClick={() => { setShowActions(false); setShowShare(true); }}><Share2 />Share RSS</button>}<button className="danger" onClick={hideActiveChat}><Trash2 />{activeChat.type === 'rss' ? 'Remove RSS channel' : 'Hide conversation'}</button></div>}</div></div></header>
-          {feedError && <div className="conversation-error"><span>{feedError}</span><button onClick={() => setFeedError('')}><X /></button></div>}
-          <section className={`messages ${activeChat.type === 'rss' ? 'rss-messages' : ''}`}>
-            {messages.map((message, index) => {
-              if (message.type === 'rss') return <article className="rss-card" key={message.id || index}>{message.imageUrl && <a href={message.link} target="_blank" rel="noreferrer" className="rss-image"><img src={message.imageUrl} alt={message.title || 'RSS article'} onError={(event) => { event.currentTarget.closest('.rss-image')?.remove(); }} /></a>}<div className="rss-content"><div className="rss-meta"><span><CalendarDays />{formatDate(message.createdAt)}</span>{message.author && <span>{message.author}</span>}</div><h3>{message.title}</h3><p>{message.body}</p>{message.link && <a className="rss-link" target="_blank" rel="noreferrer" href={message.link}>Read article <ExternalLink /></a>}</div></article>;
-              const fileUrl = resolveAssetUrl(message.fileUrl);
-              return <div key={message.id || message.clientId || index} className={`bubble ${message.senderId === user.id ? 'mine' : ''}`}><p>{message.body || message.title}</p>{message.mimeType?.startsWith('image/') && fileUrl && <img src={fileUrl} alt={message.fileName || 'Shared file'} />}{message.mimeType?.startsWith('video/') && fileUrl && <video controls src={fileUrl} />}{message.type === 'voice' && fileUrl && <audio controls src={fileUrl} />}{message.fileExpired && <small>File expired</small>}{fileUrl && !message.mimeType?.match(/^(image|video|audio)\//) && <a href={fileUrl}>{message.fileName || 'Download file'}</a>}<time>{formatDate(message.createdAt)} {message.status && `· ${message.status}`}</time></div>;
-            })}
-          </section>
-          {activeChat.type !== 'rss' && <footer className="composer"><input ref={file} type="file" hidden onChange={(event) => { const selected = event.target.files?.[0]; if (selected) uploadFile(selected, selected.name); event.target.value = ''; }} /><button onClick={() => file.current?.click()}><FileUp /></button><button onClick={() => setEmoji(!emoji)}><Smile /></button>{emoji && <div className="emoji"><EmojiPicker onEmojiClick={(selectedEmoji) => { setText((current) => current + selectedEmoji.emoji); setEmoji(false); }} /></div>}<textarea placeholder={status === 'offline' ? 'Write a message — it will be queued' : 'Write a message'} value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); } }} /><button className={recorder.current ? 'recording' : ''} onClick={voice}><Mic /></button><button className="send" onClick={send}><Send /></button></footer>}
-        </> : <div className="empty"><img src="/icon.svg" alt="Verdant" /><h2>Your conversations, naturally connected.</h2><p>Select a chat or create a new one.</p></div>}
+        {activeChat ? (
+          <>
+            <header className="conversation-head">
+              <button className="mobile-back" onClick={() => setActive(null)}><Menu /></button>
+              <Avatar entity={activeChat} icon={activeChat.type === 'group' ? <Users /> : activeChat.type === 'rss' ? <Archive /> : null} className="head-avatar" />
+              <div className="conversation-title">
+                <b>{activeChat.title || `${activeChat.type} chat`}</b>
+                {activeChat.type === 'direct' && <small>{formatPresence(activeChat.peer)}</small>}
+              </div>
+              <div className="head-actions">
+                <button title="Export HTML" onClick={exportHtml}><Archive /></button>
+                <div className="conversation-actions" ref={actionsRef}>
+                  <button onClick={() => setShowActions((current) => !current)}><MoreVertical /></button>
+                  {showActions && (
+                    <div className="conversation-menu">
+                      <button onClick={refreshActiveChat}><RefreshCw />Refresh</button>
+                      {activeChat.type === 'rss' && (activeChat.ownerId === user.id || user.role === 'admin') && (
+                        <button onClick={() => { setShowActions(false); setShowShare(true); }}><Share2 />Share RSS</button>
+                      )}
+                      <button className="danger" onClick={hideActiveChat}><Trash2 />{activeChat.type === 'rss' ? 'Remove RSS channel' : 'Hide conversation'}</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            <ConnectionNotice status={status} />
+
+            {feedError && (
+              <div className="conversation-error">
+                <span>{feedError}</span>
+                <button onClick={() => setFeedError('')}><X /></button>
+              </div>
+            )}
+
+            <section className={`messages ${activeChat.type === 'rss' ? 'rss-messages' : ''}`}>
+              {messages.map((message, index) => {
+                if (message.type === 'rss') {
+                  return (
+                    <article className="rss-card" key={message.id || index}>
+                      {message.imageUrl && (
+                        <a href={message.link} target="_blank" rel="noreferrer" className="rss-image">
+                          <img
+                            src={message.imageUrl}
+                            alt={message.title || 'RSS article'}
+                            onError={(event) => { event.currentTarget.closest('.rss-image')?.remove(); }}
+                          />
+                        </a>
+                      )}
+                      <div className="rss-content">
+                        <div className="rss-meta">
+                          <span><CalendarDays />{formatDate(message.createdAt)}</span>
+                          {message.author && <span>{message.author}</span>}
+                        </div>
+                        <h3>{message.title}</h3>
+                        <p>{message.body}</p>
+                        {message.link && <a className="rss-link" target="_blank" rel="noreferrer" href={message.link}>Read article <ExternalLink /></a>}
+                      </div>
+                    </article>
+                  );
+                }
+
+                const fileUrl = resolveAssetUrl(message.fileUrl);
+                const isImage = message.mimeType?.startsWith('image/');
+                const isVideo = message.mimeType?.startsWith('video/');
+
+                return (
+                  <div key={message.id || message.clientId || index} className={`bubble ${message.senderId === user.id ? 'mine' : ''}`}>
+                    <p>{message.body || message.title}</p>
+                    {isImage && fileUrl && <img src={fileUrl} alt={message.fileName || 'Shared file'} />}
+                    {isVideo && fileUrl && <video controls src={fileUrl} />}
+                    {message.type === 'voice' && fileUrl && <audio controls src={fileUrl} />}
+                    {message.fileExpired && <small>File expired</small>}
+                    {fileUrl && (isImage || isVideo) && (
+                      <a className="media-download" href={fileUrl} download={message.fileName || undefined}>
+                        <Download /> Download
+                      </a>
+                    )}
+                    {fileUrl && !message.mimeType?.match(/^(image|video|audio)\//) && (
+                      <a href={fileUrl} download={message.fileName || undefined}>{message.fileName || 'Download file'}</a>
+                    )}
+                    <time>{formatDate(message.createdAt)} {message.status && `· ${message.status}`}</time>
+                  </div>
+                );
+              })}
+            </section>
+
+            {activeChat.type !== 'rss' && (
+              <footer className="composer">
+                <input
+                  ref={file}
+                  type="file"
+                  hidden
+                  onChange={(event) => {
+                    const selected = event.target.files?.[0];
+                    if (selected) uploadFile(selected, selected.name);
+                    event.target.value = '';
+                  }}
+                />
+                <button onClick={() => file.current?.click()}><FileUp /></button>
+                <button onClick={() => setEmoji(!emoji)}><Smile /></button>
+                {emoji && (
+                  <div className="emoji">
+                    <EmojiPicker onEmojiClick={(selectedEmoji) => {
+                      setText((current) => current + selectedEmoji.emoji);
+                      setEmoji(false);
+                    }} />
+                  </div>
+                )}
+                <textarea
+                  placeholder={status === 'offline'
+                    ? 'Write a message — it will be queued'
+                    : 'Write a message'}
+                  value={text}
+                  onChange={(event) => setText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      send();
+                    }
+                  }}
+                />
+                <button className={recorder.current ? 'recording' : ''} onClick={voice}><Mic /></button>
+                <button className="send" onClick={send}><Send /></button>
+              </footer>
+            )}
+          </>
+        ) : (
+          <div className="empty">
+            <img src="/icon.svg" alt="Verdant" />
+            <h2>Your conversations, naturally connected.</h2>
+            <p>Select a chat or create a new one.</p>
+          </div>
+        )}
       </main>
+
+      {!activeChat && (
+        <MobileNav
+          unreadCount={unreadTotal}
+          showFab={showFab}
+          onChats={() => {
+            setActive(null);
+            chatListRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onProfile={() => setShowAccountMenu(true)}
+          onNewChat={() => setShowNew(true)}
+        />
+      )}
+
+      {showAccountMenu && (
+        <AccountMenu
+          user={user}
+          onClose={() => setShowAccountMenu(false)}
+          onProfile={openProfile}
+          onAdmin={openAdmin}
+          onLogout={logout}
+        />
+      )}
 
       {showNew && <NewChat onClose={() => setShowNew(false)} onCreated={handleChatCreated} />}
       {showShare && activeChat?.type === 'rss' && <RssShareModal chat={activeChat} onClose={() => setShowShare(false)} />}
@@ -473,45 +810,106 @@ function NewChat({ onClose, onCreated }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (query.trim().length < 2) { setUsers([]); return undefined; }
+    if (query.trim().length < 2) {
+      setUsers([]);
+      return undefined;
+    }
+
     let cancelled = false;
     const timer = setTimeout(() => {
       api(`/api/users/search?q=${encodeURIComponent(query.trim())}`)
         .then((data) => { if (!cancelled) setUsers(data.users || []); })
         .catch((requestError) => { if (!cancelled) setError(requestError.message); });
     }, 250);
-    return () => { cancelled = true; clearTimeout(timer); };
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query]);
 
   async function create(selectedUser) {
     if (busy) return;
     setError('');
+
     try {
       setBusy(true);
       let data;
+
       if (type === 'direct') {
         if (!selectedUser) throw new Error('Select a user first');
-        data = await api('/api/chats/direct', { method: 'POST', body: JSON.stringify({ userId: selectedUser.id }) });
+        data = await api('/api/chats/direct', {
+          method: 'POST',
+          body: JSON.stringify({ userId: selectedUser.id }),
+        });
       } else if (type === 'group') {
         if (!selectedUser) throw new Error('Select at least one member');
         if (!title.trim()) throw new Error('Enter a group title');
-        data = await api('/api/chats/group', { method: 'POST', body: JSON.stringify({ title: title.trim(), memberIds: [selectedUser.id] }) });
+        data = await api('/api/chats/group', {
+          method: 'POST',
+          body: JSON.stringify({ title: title.trim(), memberIds: [selectedUser.id] }),
+        });
       } else {
         const feedUrl = rss.trim();
         if (!feedUrl) throw new Error('Enter an RSS or Atom feed URL');
         const parsedUrl = new URL(feedUrl);
-        if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('RSS URL must use http or https');
-        data = await api('/api/v2/rss', { method: 'POST', body: JSON.stringify({ title: title.trim(), url: parsedUrl.toString() }) });
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          throw new Error('RSS URL must use http or https');
+        }
+        data = await api('/api/v2/rss', {
+          method: 'POST',
+          body: JSON.stringify({ title: title.trim(), url: parsedUrl.toString() }),
+        });
       }
+
       await onCreated(data?.chat);
     } catch (requestError) {
-      setError(requestError.message === 'Invalid URL' ? 'Enter a valid RSS or Atom feed URL' : requestError.message);
+      setError(requestError.message === 'Invalid URL'
+        ? 'Enter a valid RSS or Atom feed URL'
+        : requestError.message);
     } finally {
       setBusy(false);
     }
   }
 
-  return <div className="modal" role="dialog" aria-modal="true"><section><header><h3>New conversation</h3><button onClick={onClose}><X /></button></header><div className="tabs">{['direct', 'group', 'rss'].map((item) => <button key={item} className={type === item ? 'active' : ''} onClick={() => { setType(item); setError(''); }}>{item}</button>)}</div>{type === 'rss' ? <><input placeholder="Channel title (optional)" value={title} onChange={(event) => setTitle(event.target.value)} /><input type="url" inputMode="url" placeholder="https://example.com/feed.xml" value={rss} onChange={(event) => setRss(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') create(); }} />{error && <p className="error">{error}</p>}<button className="primary" disabled={busy} onClick={() => create()}>{busy ? 'Adding channel…' : 'Add RSS channel'}</button></> : <><input placeholder="Search username or mobile" value={query} onChange={(event) => setQuery(event.target.value)} />{type === 'group' && <input placeholder="Group title" value={title} onChange={(event) => setTitle(event.target.value)} />}{error && <p className="error">{error}</p>}<div className="results">{users.map((candidate) => <button key={candidate.id} disabled={busy} onClick={() => create(candidate)}><Avatar entity={candidate} /><span><b>{candidate.displayName || candidate.username}</b><small>@{candidate.username} · {candidate.mobile}</small></span></button>)}</div></>}</section></div>;
+  return (
+    <div className="modal" role="dialog" aria-modal="true">
+      <section>
+        <header><h3>New conversation</h3><button onClick={onClose}><X /></button></header>
+        <div className="tabs">
+          {['direct', 'group', 'rss'].map((item) => (
+            <button key={item} className={type === item ? 'active' : ''} onClick={() => { setType(item); setError(''); }}>
+              {item}
+            </button>
+          ))}
+        </div>
+        {type === 'rss' ? (
+          <>
+            <input placeholder="Channel title (optional)" value={title} onChange={(event) => setTitle(event.target.value)} />
+            <input type="url" inputMode="url" placeholder="https://example.com/feed.xml" value={rss} onChange={(event) => setRss(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') create(); }} />
+            {error && <p className="error">{error}</p>}
+            <button className="primary" disabled={busy} onClick={() => create()}>{busy ? 'Adding channel…' : 'Add RSS channel'}</button>
+          </>
+        ) : (
+          <>
+            <input placeholder="Search username or mobile" value={query} onChange={(event) => setQuery(event.target.value)} />
+            {type === 'group' && <input placeholder="Group title" value={title} onChange={(event) => setTitle(event.target.value)} />}
+            {error && <p className="error">{error}</p>}
+            <div className="results">
+              {users.map((candidate) => (
+                <button key={candidate.id} disabled={busy} onClick={() => create(candidate)}>
+                  <Avatar entity={candidate} />
+                  <span><b>{candidate.displayName || candidate.username}</b><small>@{candidate.username} · {candidate.mobile}</small></span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
 }
 
-createRoot(document.getElementById('root')).render(<ErrorBoundary><App /></ErrorBoundary>);
+createRoot(document.getElementById('root')).render(
+  <ErrorBoundary><App /></ErrorBoundary>,
+);
