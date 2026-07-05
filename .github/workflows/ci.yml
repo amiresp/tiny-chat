@@ -33,8 +33,13 @@ jobs:
         run: |
           node --check apps/server/src/index.js
           node --check apps/server/src/start.js
-          node --check apps/server/src/feature-patch.js
-          node --check apps/server/src/rss-patch.js
+          node --check apps/server/src/feature-mount.js
+          node --check apps/server/src/feature-router.js
+          node --check apps/server/src/feature-state.js
+          node --check apps/server/src/feature-chats.js
+          node --check apps/server/src/feature-online.js
+          node --check apps/server/src/feature-avatar.js
+          node --check apps/server/src/heartbeat-state.js
 
       - name: Build web client
         run: npm run build -w @verdant/client
