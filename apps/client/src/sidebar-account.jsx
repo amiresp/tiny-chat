@@ -1,6 +1,7 @@
 import React from 'react';
 import { CircleUserRound, ShieldCheck } from 'lucide-react';
 import { apiOrigin } from './runtime';
+import './sidebar-extra.css';
 
 function resolveImage(value) {
   if (!value) return null;
