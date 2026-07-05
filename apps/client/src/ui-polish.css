@@ -1,0 +1,57 @@
+/* Chat header and menu must always sit above virtualized messages. */
+.conversation{isolation:isolate}
+.conversation-head{position:relative;z-index:120;overflow:visible;box-shadow:0 1px 0 rgba(24,51,43,.05)}
+.head-actions,.conversation-actions{position:relative;z-index:130}
+.conversation-menu{z-index:400;top:50px;width:232px;padding:7px;border-radius:16px;box-shadow:0 22px 64px rgba(13,45,35,.28);transform-origin:top right;animation:verdant-menu-in .16s ease-out;max-height:min(520px,calc(100dvh - 92px));overflow-y:auto;overscroll-behavior:contain}
+.conversation-menu:before{content:"";position:absolute;top:-6px;right:15px;width:12px;height:12px;background:#fff;border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+.conversation-menu button{position:relative;z-index:1;min-height:42px;font-size:13px;font-weight:600;transition:background .15s ease,color .15s ease,transform .15s ease}
+.conversation-menu button:hover{transform:translateX(-1px)}
+.conversation-menu button+button{margin-top:2px}
+.conversation-menu .danger{margin-top:7px;border-top:1px solid #f1d7d3;border-radius:0 0 10px 10px;padding-top:12px}
+
+/* Do not allow message controls to appear above or through the open chat menu. */
+.conversation:has(.conversation-menu) .message-actions{opacity:0!important;visibility:hidden!important;pointer-events:none!important;transform:translateY(6px)!important}
+.conversation:has(.conversation-menu) .virtual-messages:after{content:"";position:absolute;inset:0;z-index:35;background:rgba(237,244,241,.34);backdrop-filter:blur(1px);pointer-events:none}
+.virtual-messages{position:relative;z-index:1}
+.message-actions{z-index:20}
+.reaction-picker,.message-action-menu{z-index:45}
+
+/* Cleaner message controls. */
+.message-actions>button{background:rgba(255,255,255,.96);border-color:#d8e4df;box-shadow:0 7px 20px rgba(14,48,38,.14);transition:transform .14s ease,background .14s ease,border-color .14s ease}
+.message-actions>button:hover{transform:translateY(-1px);background:#f4faf7;border-color:#b8d6ca;color:var(--green)}
+.reaction-picker{padding:6px;border-radius:15px;box-shadow:0 18px 46px rgba(12,44,34,.24)}
+.message-action-menu{padding:6px;border-radius:14px;box-shadow:0 18px 46px rgba(12,44,34,.24)}
+.message-reactions button{transition:transform .14s ease,background .14s ease,border-color .14s ease}
+.message-reactions button:hover{transform:translateY(-1px)}
+
+/* Composer refinements. */
+.composer{border:1px solid rgba(204,220,213,.78);box-shadow:0 14px 42px rgba(21,61,48,.14)}
+.composer textarea{min-height:42px;line-height:1.55}
+.composer button{transition:background .14s ease,color .14s ease,transform .14s ease}
+.composer button:hover{background:#edf7f3;color:var(--green);transform:translateY(-1px)}
+.composer .send:hover{background:#0e6c55;color:#fff}
+.composer-reply{box-shadow:0 -8px 24px rgba(19,59,46,.08)}
+
+@keyframes verdant-menu-in{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+
+@media(max-width:760px){
+  .conversation-head{z-index:140}
+  .conversation-menu{position:fixed;top:70px;right:10px;left:10px;width:auto;max-height:calc(100dvh - 150px);border-radius:18px;padding:8px;box-shadow:0 24px 72px rgba(8,35,27,.34)}
+  .conversation-menu:before{display:none}
+  .conversation-menu button{min-height:46px;padding:12px 13px;font-size:14px}
+
+  /* Mobile keyboards already provide emoji input. */
+  .composer>button:nth-of-type(2),
+  .composer .emoji{display:none!important}
+
+  .composer{gap:5px;margin:7px 7px max(7px,env(safe-area-inset-bottom));padding:7px;border-radius:17px}
+  .composer textarea{padding:9px 6px;min-height:44px;font-size:16px}
+  .composer button{width:42px;height:42px;border-radius:12px}
+  .composer .send{border-radius:13px}
+
+  .message-actions{top:-12px;gap:2px}
+  .message-actions>button{width:29px;height:29px}
+  .reaction-picker{max-width:calc(100vw - 26px);overflow-x:auto;scrollbar-width:none}
+  .reaction-picker::-webkit-scrollbar{display:none}
+  .conversation:has(.conversation-menu) .virtual-messages:after{background:rgba(232,241,237,.5);backdrop-filter:blur(2px)}
+}
