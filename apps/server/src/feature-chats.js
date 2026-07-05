@@ -59,9 +59,13 @@ async function enrichChats(list, currentUserId) {
     peerByChatId = new Map(peers.map((peer) => [Number(peer.chatId), peer]));
   }
 
+  const now = Date.now();
   return list.map((chat) => ({
     ...personalizeDirectChat(chat, peerByChatId.get(Number(chat.id))),
     unreadCount: Number(chat.unreadCount || 0),
+    pinned: Boolean(chat.pinnedAt),
+    archived: Boolean(chat.archivedAt),
+    muted: Boolean(chat.mutedUntil && new Date(chat.mutedUntil).getTime() > now),
   }));
 }
 
@@ -69,7 +73,13 @@ function notifyUser(io, userId, chat) {
   if (!io) return;
   const room = `user:${userId}`;
   io.in(room).socketsJoin(`chat:${chat.id}`);
-  io.to(room).emit('chat:new', { ...chat, unreadCount: 0 });
+  io.to(room).emit('chat:new', {
+    ...chat,
+    unreadCount: 0,
+    pinned: false,
+    archived: false,
+    muted: false,
+  });
 }
 
 export function createChatFeatureRouter({ io = null } = {}) {
@@ -85,6 +95,7 @@ export function createChatFeatureRouter({ io = null } = {}) {
         AND unread_receipts.user_id = ${userId}
       WHERE unread_messages.chat_id = ${chats.id}
         AND unread_messages.sender_id <> ${userId}
+        AND unread_messages.deleted_at IS NULL
         AND unread_receipts.read_at IS NULL
     )`.as('unread_count');
 
@@ -96,6 +107,9 @@ export function createChatFeatureRouter({ io = null } = {}) {
       ownerId: chats.ownerId,
       rssUrl: chats.rssUrl,
       updatedAt: chats.updatedAt,
+      pinnedAt: chatMembers.pinnedAt,
+      archivedAt: chatMembers.archivedAt,
+      mutedUntil: chatMembers.mutedUntil,
       unreadCount,
     }).from(chats)
       .innerJoin(chatMembers, eq(chatMembers.chatId, chats.id))
@@ -103,7 +117,7 @@ export function createChatFeatureRouter({ io = null } = {}) {
         eq(chatMembers.userId, userId),
         sql`${chatMembers.hiddenAt} IS NULL`,
       ))
-      .orderBy(desc(chats.updatedAt));
+      .orderBy(desc(chatMembers.pinnedAt), desc(chats.updatedAt));
 
     response.json({ chats: await enrichChats(list, userId) });
   }));
@@ -162,7 +176,7 @@ export function createChatFeatureRouter({ io = null } = {}) {
     });
 
     notifyUser(io, request.user.id, chat);
-    return response.status(201).json({ chat: { ...chat, unreadCount: 0 } });
+    return response.status(201).json({ chat: { ...chat, unreadCount: 0, pinned: false, archived: false, muted: false } });
   }));
 
   router.post('/chats/:id/share', auth, route(async (request, response) => {
