@@ -33,10 +33,15 @@ jobs:
         run: |
           node --check apps/server/src/index.js
           node --check apps/server/src/start.js
+          node --check apps/server/src/db.js
+          node --check apps/server/src/schema.js
+          node --check apps/server/src/feature-io.js
           node --check apps/server/src/feature-mount.js
           node --check apps/server/src/feature-router.js
           node --check apps/server/src/feature-state.js
           node --check apps/server/src/feature-chats.js
+          node --check apps/server/src/feature-interactions.js
+          node --check apps/server/src/feature-message-pages.js
           node --check apps/server/src/feature-online.js
           node --check apps/server/src/feature-avatar.js
           node --check apps/server/src/heartbeat-state.js
