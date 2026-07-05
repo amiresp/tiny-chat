@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
+      args:
+        DEPS_IMAGE: ${DEPS_IMAGE:-tiny-chat-deps:node22}
     env_file:
       - .env
     expose:
@@ -28,6 +30,8 @@ services:
     build:
       context: .
       dockerfile: apps/client/Dockerfile
+      args:
+        DEPS_IMAGE: ${DEPS_IMAGE:-tiny-chat-deps:node22}
     expose:
       - "80"
     depends_on:
