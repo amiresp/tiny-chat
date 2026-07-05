@@ -1,3 +1,5 @@
-import './rss-patch.js';
-import './feature-patch.js';
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled promise rejection:', error);
+});
+
 await import('./index.js');
