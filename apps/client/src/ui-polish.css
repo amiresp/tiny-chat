@@ -40,7 +40,8 @@
   .conversation-menu:before{display:none}
   .conversation-menu button{min-height:46px;padding:12px 13px;font-size:14px}
 
-  /* Mobile keyboards already provide emoji input. */
+  /* Keep attachments available, hide only the redundant emoji UI. */
+  .composer>button:nth-of-type(1){display:grid!important}
   .composer>button:nth-of-type(2),
   .composer .emoji{display:none!important}
 
