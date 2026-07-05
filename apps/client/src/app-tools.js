@@ -7,13 +7,20 @@ function showInAppToast({ title, body, icon }) {
   const toast = document.createElement('button');
   toast.className = 'verdant-notification-toast';
   toast.type = 'button';
-  toast.innerHTML = `
-    <img src="${icon || '/icon.svg'}" alt="">
-    <span>
-      <strong>${String(title || 'New message').replace(/[&<>"']/g, '')}</strong>
-      <small>${String(body || 'You have a new message.').replace(/[&<>"']/g, '')}</small>
-    </span>
-  `;
+
+  const image = document.createElement('img');
+  image.src = icon || '/icon.svg';
+  image.alt = '';
+  image.onerror = () => { image.src = '/icon.svg'; };
+
+  const content = document.createElement('span');
+  const heading = document.createElement('strong');
+  const description = document.createElement('small');
+  heading.textContent = title || 'New message';
+  description.textContent = body || 'You have a new message.';
+  content.append(heading, description);
+  toast.append(image, content);
+
   toast.addEventListener('click', () => {
     window.focus();
     toast.remove();
