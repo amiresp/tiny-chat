@@ -85,9 +85,6 @@ CREATE TABLE IF NOT EXISTS receipts (
   UNIQUE(message_id,user_id)
 );
 CREATE INDEX IF NOT EXISTS messages_chat_created_idx ON messages(chat_id, created_at DESC, id DESC);
-CREATE INDEX IF NOT EXISTS messages_chat_media_idx ON messages(chat_id, mime_type, id DESC);
-CREATE INDEX IF NOT EXISTS reactions_message_idx ON message_reactions(message_id);
-CREATE INDEX IF NOT EXISTS chat_members_user_state_idx ON chat_members(user_id, archived_at, pinned_at);
 `);
 
 function hasColumn(tableName, columnName) {
@@ -106,5 +103,11 @@ addColumn('chat_members', 'muted_until', 'INTEGER');
 addColumn('messages', 'reply_to_id', 'INTEGER');
 addColumn('messages', 'edited_at', 'INTEGER');
 addColumn('messages', 'deleted_at', 'INTEGER');
+
+sqlite.exec(`
+CREATE INDEX IF NOT EXISTS messages_chat_media_idx ON messages(chat_id, mime_type, id DESC);
+CREATE INDEX IF NOT EXISTS reactions_message_idx ON message_reactions(message_id);
+CREATE INDEX IF NOT EXISTS chat_members_user_state_idx ON chat_members(user_id, archived_at, pinned_at);
+`);
 
 export const db = drizzle(sqlite, { schema });
