@@ -65,7 +65,14 @@ async function enrichChats(list, currentUserId) {
   }));
 }
 
-export function createChatFeatureRouter({ io }) {
+function notifyUser(io, userId, chat) {
+  if (!io) return;
+  const room = `user:${userId}`;
+  io.in(room).socketsJoin(`chat:${chat.id}`);
+  io.to(room).emit('chat:new', { ...chat, unreadCount: 0 });
+}
+
+export function createChatFeatureRouter({ io = null } = {}) {
   const router = express.Router();
 
   router.get('/chats', auth, route(async (request, response) => {
@@ -154,9 +161,7 @@ export function createChatFeatureRouter({ io }) {
       joinedAt: now,
     });
 
-    const room = `user:${request.user.id}`;
-    io.in(room).socketsJoin(`chat:${chat.id}`);
-    io.to(room).emit('chat:new', { ...chat, unreadCount: 0 });
+    notifyUser(io, request.user.id, chat);
     return response.status(201).json({ chat: { ...chat, unreadCount: 0 } });
   }));
 
@@ -191,10 +196,7 @@ export function createChatFeatureRouter({ io }) {
         target: [chatMembers.chatId, chatMembers.userId],
         set: { hiddenAt: null },
       });
-
-      const room = `user:${userId}`;
-      io.in(room).socketsJoin(`chat:${chat.id}`);
-      io.to(room).emit('chat:new', { ...chat, unreadCount: 0 });
+      notifyUser(io, userId, chat);
     }
 
     return response.json({ ok: true, sharedCount: targetIds.length });
