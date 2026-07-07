@@ -18,6 +18,8 @@ import './chat-features.css';
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥'];
 const ESTIMATED_HEIGHT = 132;
 const OVERSCAN = 8;
+const REPLY_SWIPE_THRESHOLD = 62;
+const REPLY_SWIPE_LIMIT = 86;
 
 function assetUrl(value) {
   if (!value) return null;
@@ -66,9 +68,66 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onReact, onOp
   const image = message.mimeType?.startsWith('image/');
   const video = message.mimeType?.startsWith('video/');
   const audio = message.mimeType?.startsWith('audio/') || message.type === 'voice';
+  const swipe = useRef(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const canSwipeReply = !message.deletedAt;
+
+  function touchStart(event) {
+    if (!canSwipeReply || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    swipe.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      active: false,
+    };
+  }
+
+  function touchMove(event) {
+    if (!swipe.current || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - swipe.current.startX;
+    const deltaY = touch.clientY - swipe.current.startY;
+
+    if (!swipe.current.active) {
+      if (Math.abs(deltaY) > 12 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        swipe.current = null;
+        setSwipeX(0);
+        return;
+      }
+      if (deltaX > 12 && deltaX > Math.abs(deltaY) * 1.25) {
+        swipe.current.active = true;
+      }
+    }
+
+    if (!swipe.current?.active) return;
+    event.preventDefault();
+    const next = Math.max(0, Math.min(REPLY_SWIPE_LIMIT, deltaX));
+    setSwipeX(next);
+  }
+
+  function touchEnd() {
+    if (!swipe.current) return;
+    const shouldReply = swipe.current.active && swipeX >= REPLY_SWIPE_THRESHOLD;
+    swipe.current = null;
+    setSwipeX(0);
+    if (shouldReply) onReply(message);
+  }
 
   return (
-    <article className={`message-row ${mine ? 'mine' : ''}`}>
+    <article
+      className={`message-row ${mine ? 'mine' : ''} ${swipeX ? 'swiping-reply' : ''}`}
+      style={{ '--reply-swipe': `${swipeX}px` }}
+      onTouchStart={touchStart}
+      onTouchMove={touchMove}
+      onTouchEnd={touchEnd}
+      onTouchCancel={touchEnd}
+    >
+      {canSwipeReply && (
+        <span className="swipe-reply-cue" aria-hidden="true">
+          <MessageSquareReply />
+        </span>
+      )}
+
       <div className={`bubble ${mine ? 'mine' : ''} ${message.deletedAt ? 'deleted' : ''}`}>
         <MessageActions message={message} mine={mine} onReply={onReply} onEdit={onEdit} onDelete={onDelete} onReact={onReact} />
 
