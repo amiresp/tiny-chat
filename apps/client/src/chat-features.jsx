@@ -87,6 +87,7 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onReact, onOp
     const touch = event.touches[0];
     const deltaX = touch.clientX - swipe.current.startX;
     const deltaY = touch.clientY - swipe.current.startY;
+    const effectiveDeltaX = mine ? -deltaX : deltaX;
 
     if (!swipe.current.active) {
       if (Math.abs(deltaY) > 12 && Math.abs(deltaY) > Math.abs(deltaX)) {
@@ -94,14 +95,14 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onReact, onOp
         setSwipeX(0);
         return;
       }
-      if (deltaX > 12 && deltaX > Math.abs(deltaY) * 1.25) {
+      if (effectiveDeltaX > 12 && effectiveDeltaX > Math.abs(deltaY) * 1.25) {
         swipe.current.active = true;
       }
     }
 
     if (!swipe.current?.active) return;
     event.preventDefault();
-    const next = Math.max(0, Math.min(REPLY_SWIPE_LIMIT, deltaX));
+    const next = Math.max(0, Math.min(REPLY_SWIPE_LIMIT, effectiveDeltaX));
     setSwipeX(next);
   }
 
