@@ -45,13 +45,17 @@
 
 /* Account bottom sheet motion. */
 .account-menu-overlay{animation:verdant-backdrop-in .22s ease-out both}
+.account-menu-overlay.closing{animation:verdant-backdrop-out .2s ease-in both;pointer-events:none}
 .account-menu-sheet{animation:verdant-sheet-in .28s cubic-bezier(.18,.9,.2,1.02) both;will-change:transform,opacity}
+.account-menu-overlay.closing .account-menu-sheet{animation:verdant-sheet-out .2s cubic-bezier(.4,0,1,1) both}
 .account-menu-actions>button{transition:background .15s ease,transform .15s ease}
 .account-menu-actions>button:hover{transform:translateY(-1px)}
 
 @keyframes verdant-menu-in{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes verdant-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes verdant-backdrop-out{from{opacity:1}to{opacity:0}}
 @keyframes verdant-sheet-in{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes verdant-sheet-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(20px) scale(.97)}}
 
 @media(max-width:760px){
   .conversation-head{z-index:140}
@@ -80,6 +84,8 @@
   .message-row.mine .swipe-reply-cue{right:6px}
   .account-menu-overlay{animation:verdant-backdrop-in .22s ease-out both}
   .account-menu-sheet{animation:verdant-mobile-sheet-in .32s cubic-bezier(.16,1,.3,1) both}
+  .account-menu-overlay.closing .account-menu-sheet{animation:verdant-mobile-sheet-out .2s cubic-bezier(.4,0,1,1) both}
 }
 
 @keyframes verdant-mobile-sheet-in{from{opacity:.4;transform:translateY(100%) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes verdant-mobile-sheet-out{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:.2;transform:translateY(100%) scale(.98)}}
