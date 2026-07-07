@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Bell,
   BellOff,
@@ -10,10 +10,24 @@ import {
 } from 'lucide-react';
 import { enableNotifications, notificationState, refreshPwa } from './app-tools';
 
+const CLOSE_DELAY = 220;
+
 export function AccountMenu({ user, onClose, onProfile, onAdmin, onLogout }) {
   const [permission, setPermission] = useState(notificationState());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef(null);
+
+  function closeThen(callback) {
+    if (closing) return;
+    setClosing(true);
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => {
+      onClose();
+      callback?.();
+    }, CLOSE_DELAY);
+  }
 
   async function activateNotifications() {
     try {
@@ -41,8 +55,8 @@ export function AccountMenu({ user, onClose, onProfile, onAdmin, onLogout }) {
   }
 
   return (
-    <div className="account-menu-overlay" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onClose();
+    <div className={`account-menu-overlay ${closing ? 'closing' : ''}`} onMouseDown={(event) => {
+      if (event.target === event.currentTarget) closeThen();
     }}>
       <section className="account-menu-sheet" role="dialog" aria-modal="true">
         <header>
@@ -50,17 +64,17 @@ export function AccountMenu({ user, onClose, onProfile, onAdmin, onLogout }) {
             <strong>{user?.displayName || user?.username || 'Account'}</strong>
             <small>@{user?.username || 'user'}</small>
           </div>
-          <button title="Close" onClick={onClose}><X /></button>
+          <button title="Close" onClick={() => closeThen()}><X /></button>
         </header>
 
         <div className="account-menu-actions">
-          <button onClick={() => { onClose(); onProfile(); }}>
+          <button onClick={() => closeThen(onProfile)}>
             <CircleUserRound />
             <span><b>Profile</b><small>Account, privacy and password</small></span>
           </button>
 
           {user?.role === 'admin' && (
-            <button onClick={() => { onClose(); onAdmin(); }}>
+            <button onClick={() => closeThen(onAdmin)}>
               <ShieldCheck />
               <span><b>Administration</b><small>Users, chats and online sessions</small></span>
             </button>
