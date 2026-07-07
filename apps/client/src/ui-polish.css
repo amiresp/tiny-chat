@@ -16,6 +16,17 @@
 .message-actions{z-index:20}
 .reaction-picker,.message-action-menu{z-index:45}
 
+/* Swipe to reply. */
+.message-row{position:relative;touch-action:pan-y;--reply-swipe:0px}
+.message-row .bubble{will-change:transform;transform:translate3d(var(--reply-swipe),0,0);transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+.message-row.swiping-reply .bubble{transition:none}
+.swipe-reply-cue{position:absolute;top:50%;left:8px;z-index:0;width:36px;height:36px;margin-top:-18px;border-radius:14px;display:grid;place-items:center;background:#dff3eb;color:var(--green);opacity:0;transform:scale(.82);transition:opacity .16s ease,transform .16s ease;pointer-events:none}
+.message-row.swiping-reply .swipe-reply-cue{opacity:1;transform:scale(1)}
+.message-row.mine .swipe-reply-cue{left:auto;right:8px}
+.message-row.mine .bubble{transform:translate3d(calc(var(--reply-swipe) * -1),0,0)}
+.message-row.swiping-reply.mine .swipe-reply-cue{opacity:1;transform:scale(1)}
+.swipe-reply-cue svg{width:18px;height:18px}
+
 /* Cleaner message controls. */
 .message-actions>button{background:rgba(255,255,255,.96);border-color:#d8e4df;box-shadow:0 7px 20px rgba(14,48,38,.14);transition:transform .14s ease,background .14s ease,border-color .14s ease}
 .message-actions>button:hover{transform:translateY(-1px);background:#f4faf7;border-color:#b8d6ca;color:var(--green)}
@@ -32,7 +43,15 @@
 .composer .send:hover{background:#0e6c55;color:#fff}
 .composer-reply{box-shadow:0 -8px 24px rgba(19,59,46,.08)}
 
+/* Account bottom sheet motion. */
+.account-menu-overlay{animation:verdant-backdrop-in .22s ease-out both}
+.account-menu-sheet{animation:verdant-sheet-in .28s cubic-bezier(.18,.9,.2,1.02) both;will-change:transform,opacity}
+.account-menu-actions>button{transition:background .15s ease,transform .15s ease}
+.account-menu-actions>button:hover{transform:translateY(-1px)}
+
 @keyframes verdant-menu-in{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes verdant-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes verdant-sheet-in{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:none}}
 
 @media(max-width:760px){
   .conversation-head{z-index:140}
@@ -55,4 +74,12 @@
   .reaction-picker{max-width:calc(100vw - 26px);overflow-x:auto;scrollbar-width:none}
   .reaction-picker::-webkit-scrollbar{display:none}
   .conversation:has(.conversation-menu) .virtual-messages:after{background:rgba(232,241,237,.5);backdrop-filter:blur(2px)}
+
+  .message-row{padding-left:4px;padding-right:4px}
+  .swipe-reply-cue{left:6px;background:#fff;border:1px solid #cbe3da;box-shadow:0 8px 22px rgba(14,48,38,.14)}
+  .message-row.mine .swipe-reply-cue{right:6px}
+  .account-menu-overlay{animation:verdant-backdrop-in .22s ease-out both}
+  .account-menu-sheet{animation:verdant-mobile-sheet-in .32s cubic-bezier(.16,1,.3,1) both}
 }
+
+@keyframes verdant-mobile-sheet-in{from{opacity:.4;transform:translateY(100%) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
