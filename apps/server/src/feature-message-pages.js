@@ -35,6 +35,14 @@ function messageQuery(where) {
   `;
 }
 
+function hasColumn(tableName, columnName) {
+  return sqlite.prepare(`PRAGMA table_info(${tableName})`).all().some((column) => column.name === columnName);
+}
+
+const hasDeliveredAt = hasColumn('messages', 'delivered_at');
+const hasFailedAt = hasColumn('messages', 'failed_at');
+const hasForwardedFrom = hasColumn('messages', 'forwarded_from_id');
+
 function mapMessage(row) {
   return {
     id: row.id,
@@ -64,8 +72,11 @@ function mapMessage(row) {
       body: row.reply_deleted_at ? 'Message deleted' : (row.reply_body || row.reply_file_name || 'Attachment'),
       deletedAt: row.reply_deleted_at,
     } : null,
+    forwardedFromId: hasForwardedFrom ? row.forwarded_from_id : null,
     editedAt: row.edited_at,
     deletedAt: row.deleted_at,
+    deliveredAt: hasDeliveredAt ? row.delivered_at : null,
+    failedAt: hasFailedAt ? row.failed_at : null,
     createdAt: row.created_at,
     reactions: [],
   };
@@ -128,6 +139,25 @@ function markRead(messages, userId) {
   transaction(messages);
 }
 
+function canSendToChat(chatId, senderId) {
+  const chat = sqlite.prepare('SELECT id,type FROM chats WHERE id=?').get(chatId);
+  if (!chat) return { ok: false, status: 404, error: 'Chat not found.' };
+  if (chat.type !== 'direct') return { ok: true };
+  const peer = sqlite.prepare('SELECT user_id FROM chat_members WHERE chat_id=? AND user_id<>? LIMIT 1').get(chatId, senderId);
+  if (!peer) return { ok: true };
+  const blocked = sqlite.prepare(`
+    SELECT 1 FROM user_blocks
+    WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)
+    LIMIT 1
+  `).get(senderId, peer.user_id, peer.user_id, senderId);
+  if (blocked) return { ok: false, status: 403, error: 'Messaging is blocked for this conversation.' };
+  const peerPrivacy = sqlite.prepare('SELECT allow_messages FROM user_privacy WHERE user_id=?').get(peer.user_id);
+  if (peerPrivacy?.allow_messages === 'contacts') {
+    return { ok: false, status: 403, error: 'This user only accepts messages from contacts.' };
+  }
+  return { ok: true };
+}
+
 export function createMessagePageRouter() {
   const router = express.Router();
 
@@ -163,6 +193,9 @@ export function createMessagePageRouter() {
       return response.status(403).json({ error: 'Not a member' });
     }
 
+    const allowed = canSendToChat(chatId, request.user.id);
+    if (!allowed.ok) return response.status(allowed.status).json({ error: allowed.error });
+
     const body = String(request.body.body || '').trim().slice(0, 10_000);
     if (!body) return response.status(400).json({ error: 'Message cannot be empty' });
 
@@ -181,10 +214,18 @@ export function createMessagePageRouter() {
     }
 
     const now = Date.now();
-    const result = sqlite.prepare(`
-      INSERT INTO messages (client_id, chat_id, sender_id, type, body, reply_to_id, created_at)
-      VALUES (?, ?, ?, 'text', ?, ?, ?)
-    `).run(clientId, chatId, request.user.id, body, replyToId, now);
+    let result;
+    if (hasDeliveredAt) {
+      result = sqlite.prepare(`
+        INSERT INTO messages (client_id, chat_id, sender_id, type, body, reply_to_id, delivered_at, created_at)
+        VALUES (?, ?, ?, 'text', ?, ?, ?, ?)
+      `).run(clientId, chatId, request.user.id, body, replyToId, now, now);
+    } else {
+      result = sqlite.prepare(`
+        INSERT INTO messages (client_id, chat_id, sender_id, type, body, reply_to_id, created_at)
+        VALUES (?, ?, ?, 'text', ?, ?, ?)
+      `).run(clientId, chatId, request.user.id, body, replyToId, now);
+    }
     sqlite.prepare('UPDATE chats SET updated_at = ? WHERE id = ?').run(now, chatId);
 
     const message = getMessage(Number(result.lastInsertRowid), request.user.id);
