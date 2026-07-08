@@ -46,17 +46,11 @@ services:
     working_dir: /app
     environment:
       VITE_PROXY_TARGET: http://server:9997
+      WEB_WORKSPACE: ${WEB_WORKSPACE:-@verdant/client-v2}
     command:
-      - npm
-      - run
-      - dev
-      - -w
-      - "@verdant/client"
-      - --
-      - --host
-      - 0.0.0.0
-      - --port
-      - "5173"
+      - sh
+      - -lc
+      - npm run dev -w "$${WEB_WORKSPACE}" -- --host 0.0.0.0 --port 5173
     expose:
       - "5173"
     volumes:
