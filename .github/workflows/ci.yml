@@ -52,6 +52,7 @@ jobs:
         run: |
           node --check apps/client/src/profile-page.js
           node --check apps/client/src/admin-restore.js
+          node --check apps/client/src/settings-privacy-sessions.js
           node --check apps/client/src/safe-feature-panel.js
 
       - name: Build web client
