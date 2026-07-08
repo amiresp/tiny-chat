@@ -1,13 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Bookmark,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Download,
   Edit3,
+  FileText,
   Image as ImageIcon,
   Loader2,
   MessageSquareReply,
   MoreHorizontal,
+  Pin,
+  SendToBack,
   Trash2,
   X,
 } from 'lucide-react';
@@ -18,6 +23,7 @@ const ESTIMATED_HEIGHT = 132;
 const OVERSCAN = 8;
 const REPLY_SWIPE_THRESHOLD = 62;
 const REPLY_SWIPE_LIMIT = 86;
+const LONG_PRESS_MS = 520;
 
 function assetUrl(value) {
   if (!value) return null;
@@ -32,10 +38,19 @@ function formatTime(value) {
     : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function MessageActions({ message, mine, onEdit, onDelete }) {
+function messageStatus(message, mine) {
+  if (!mine) return '';
+  if (message.status === 'queued') return 'queued';
+  if (message.status === 'failed' || message.failedAt) return 'failed';
+  if (message.readAt) return 'seen';
+  if (message.deliveredAt) return 'delivered';
+  return 'sent';
+}
+
+function MessageActions({ message, mine, onEdit, onDelete, onSelect, onPin, onSave, onForward }) {
   const [open, setOpen] = useState(false);
 
-  if (message.deletedAt || !mine) return null;
+  if (message.deletedAt) return null;
 
   return (
     <div className="message-actions compact-actions">
@@ -43,15 +58,33 @@ function MessageActions({ message, mine, onEdit, onDelete }) {
 
       {open && (
         <div className="message-action-menu">
-          {message.type === 'text' && <button onClick={() => { onEdit(message); setOpen(false); }}><Edit3 />Edit</button>}
-          <button className="danger" onClick={() => { onDelete(message); setOpen(false); }}><Trash2 />Delete</button>
+          <button onClick={() => { navigator.clipboard?.writeText(message.body || message.fileName || ''); setOpen(false); }}><Copy />Copy</button>
+          <button onClick={() => { onSelect(message); setOpen(false); }}><Bookmark />Select</button>
+          <button onClick={() => { onSave(message); setOpen(false); }}><Bookmark />Save</button>
+          <button onClick={() => { onForward(message); setOpen(false); }}><SendToBack />Forward</button>
+          <button onClick={() => { onPin(message); setOpen(false); }}><Pin />Pin</button>
+          {mine && message.type === 'text' && <button onClick={() => { onEdit(message); setOpen(false); }}><Edit3 />Edit</button>}
+          {mine && <button className="danger" onClick={() => { onDelete(message); setOpen(false); }}><Trash2 />Delete</button>}
         </div>
       )}
     </div>
   );
 }
 
-function MessageBubble({ message, user, onReply, onEdit, onDelete, onOpenMedia }) {
+function MessageBubble({
+  message,
+  user,
+  selected,
+  selectionMode,
+  onReply,
+  onEdit,
+  onDelete,
+  onOpenMedia,
+  onToggleSelect,
+  onPin,
+  onSave,
+  onForward,
+}) {
   const mine = Number(message.senderId) === Number(user.id);
   const url = assetUrl(message.fileUrl);
   const image = message.mimeType?.startsWith('image/');
@@ -59,13 +92,32 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onOpenMedia }
   const audio = message.mimeType?.startsWith('audio/') || message.type === 'voice';
   const swipe = useRef(null);
   const replyTimer = useRef(null);
+  const longPress = useRef(null);
   const [swipeX, setSwipeX] = useState(0);
   const [replyFired, setReplyFired] = useState(false);
-  const canSwipeReply = !message.deletedAt;
+  const canSwipeReply = !message.deletedAt && !selectionMode;
+  const status = messageStatus(message, mine);
 
-  useEffect(() => () => window.clearTimeout(replyTimer.current), []);
+  useEffect(() => () => {
+    window.clearTimeout(replyTimer.current);
+    window.clearTimeout(longPress.current);
+  }, []);
+
+  function startLongPress() {
+    if (message.deletedAt) return;
+    window.clearTimeout(longPress.current);
+    longPress.current = window.setTimeout(() => {
+      navigator.vibrate?.(6);
+      onToggleSelect(message);
+    }, LONG_PRESS_MS);
+  }
+
+  function cancelLongPress() {
+    window.clearTimeout(longPress.current);
+  }
 
   function touchStart(event) {
+    startLongPress();
     if (!canSwipeReply || event.touches.length !== 1 || replyFired) return;
     const touch = event.touches[0];
     swipe.current = {
@@ -76,6 +128,7 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onOpenMedia }
   }
 
   function touchMove(event) {
+    cancelLongPress();
     if (!swipe.current || event.touches.length !== 1) return;
     const touch = event.touches[0];
     const deltaX = touch.clientX - swipe.current.startX;
@@ -100,6 +153,7 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onOpenMedia }
   }
 
   function touchEnd() {
+    cancelLongPress();
     if (!swipe.current) return;
     const shouldReply = swipe.current.active && swipeX >= REPLY_SWIPE_THRESHOLD;
     swipe.current = null;
@@ -119,15 +173,26 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onOpenMedia }
     }, 140);
   }
 
+  function clickMessage(event) {
+    if (!selectionMode) return;
+    event.preventDefault();
+    onToggleSelect(message);
+  }
+
   return (
     <article
-      className={`message-row ${mine ? 'mine' : ''} ${swipeX ? 'swiping-reply' : ''} ${replyFired ? 'reply-fired' : ''}`}
+      className={`message-row ${mine ? 'mine' : ''} ${selected ? 'selected-message' : ''} ${swipeX ? 'swiping-reply' : ''} ${replyFired ? 'reply-fired' : ''}`}
       style={{ '--reply-swipe': `${swipeX}px` }}
       onTouchStart={touchStart}
       onTouchMove={touchMove}
       onTouchEnd={touchEnd}
       onTouchCancel={touchEnd}
+      onMouseDown={startLongPress}
+      onMouseUp={cancelLongPress}
+      onMouseLeave={cancelLongPress}
+      onClick={clickMessage}
     >
+      {selectionMode && <span className="message-select-dot">{selected ? '✓' : ''}</span>}
       {canSwipeReply && (
         <span className="swipe-reply-cue" aria-hidden="true">
           <MessageSquareReply />
@@ -135,7 +200,7 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onOpenMedia }
       )}
 
       <div className={`bubble ${mine ? 'mine' : ''} ${message.deletedAt ? 'deleted' : ''}`}>
-        <MessageActions message={message} mine={mine} onEdit={onEdit} onDelete={onDelete} />
+        {!selectionMode && <MessageActions message={message} mine={mine} onEdit={onEdit} onDelete={onDelete} onSelect={onToggleSelect} onPin={onPin} onSave={onSave} onForward={onForward} />}
 
         {message.replyTo && (
           <button className="reply-preview" onClick={() => document.querySelector(`[data-message-id="${message.replyTo.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
@@ -143,6 +208,8 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onOpenMedia }
             <span>{message.replyTo.body}</span>
           </button>
         )}
+
+        {message.forwardedFromId && <small className="forwarded-label">Forwarded</small>}
 
         {message.deletedAt ? (
           <p className="deleted-message">Message deleted</p>
@@ -167,7 +234,7 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onOpenMedia }
           </div>
         )}
 
-        <time>{formatTime(message.createdAt)}{message.editedAt ? ' · edited' : ''}</time>
+        <time>{formatTime(message.createdAt)}{message.editedAt ? ' · edited' : ''}{status ? ` · ${status}` : ''}</time>
       </div>
     </article>
   );
@@ -184,8 +251,16 @@ export function VirtualMessageList({
   onDelete,
   onReact,
   onOpenMedia,
+  selectedMessages = new Set(),
+  selectionMode = false,
+  onToggleSelect,
+  onPin,
+  onSave,
+  onForward,
+  onPullRefresh,
 }) {
   const container = useRef(null);
+  const pull = useRef(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [height, setHeight] = useState(700);
   const wasAtBottom = useRef(true);
@@ -226,13 +301,38 @@ export function VirtualMessageList({
     if (element.scrollTop < 180 && hasMore && !loadingOlder) onLoadOlder();
   }
 
+  function touchStart(event) {
+    if (container.current?.scrollTop > 0 || event.touches.length !== 1) return;
+    pull.current = { y: event.touches[0].clientY, active: true };
+  }
+
+  function touchEnd(event) {
+    if (!pull.current) return;
+    const diff = event.changedTouches?.[0] ? event.changedTouches[0].clientY - pull.current.y : 0;
+    pull.current = null;
+    if (diff > 70) onPullRefresh?.();
+  }
+
   return (
-    <section className="messages virtual-messages" ref={container} onScroll={handleScroll}>
+    <section className="messages virtual-messages" ref={container} onScroll={handleScroll} onTouchStart={touchStart} onTouchEnd={touchEnd}>
       {loadingOlder && <div className="older-loader"><Loader2 className="spin" />Loading older messages…</div>}
       <div style={{ height: topSpace }} aria-hidden="true" />
       {visible.map((message) => (
         <div key={message.id || message.clientId} data-message-id={message.id} className="virtual-message-item">
-          <MessageBubble message={message} user={user} onReply={onReply} onEdit={onEdit} onDelete={onDelete} onOpenMedia={onOpenMedia} />
+          <MessageBubble
+            message={message}
+            user={user}
+            selected={selectedMessages.has(Number(message.id))}
+            selectionMode={selectionMode}
+            onReply={onReply}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onOpenMedia={onOpenMedia}
+            onToggleSelect={onToggleSelect}
+            onPin={onPin}
+            onSave={onSave}
+            onForward={onForward}
+          />
         </div>
       ))}
       <div style={{ height: bottomSpace }} aria-hidden="true" />
@@ -251,12 +351,19 @@ export function ReplyComposer({ message, onCancel }) {
   );
 }
 
-export function MediaGallery({ chat, onClose }) {
+function urlFromMessage(message) {
+  if (message.fileUrl) return assetUrl(message.fileUrl);
+  const match = String(message.body || '').match(/https?:\/\/\S+/i);
+  return match?.[0] || null;
+}
+
+export function MediaGallery({ chat, onClose, messages = [] }) {
   const [items, setItems] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [tab, setTab] = useState('media');
 
   async function load(reset = false) {
     if (loading || (!hasMore && !reset)) return;
@@ -282,28 +389,45 @@ export function MediaGallery({ chat, onClose }) {
 
   useEffect(() => { load(true); }, [chat.id]);
 
-  const selected = lightboxIndex === null ? null : items[lightboxIndex];
-  const selectedUrl = assetUrl(selected?.fileUrl);
+  const files = useMemo(() => messages.filter((message) => message.fileUrl && !message.mimeType?.startsWith('image/') && !message.mimeType?.startsWith('video/') && !message.mimeType?.startsWith('audio/')), [messages]);
+  const voices = useMemo(() => messages.filter((message) => message.mimeType?.startsWith('audio/') || message.type === 'voice'), [messages]);
+  const links = useMemo(() => messages.filter((message) => /https?:\/\/\S+/i.test(String(message.body || ''))), [messages]);
+  const selectedList = tab === 'media' ? items : tab === 'files' ? files : tab === 'voice' ? voices : links;
+  const selected = lightboxIndex === null ? null : selectedList[lightboxIndex];
+  const selectedUrl = assetUrl(selected?.fileUrl || urlFromMessage(selected));
 
   return (
     <div className="media-gallery-overlay" role="dialog" aria-modal="true">
       <section className="media-gallery-panel">
-        <header><div><ImageIcon /><span><b>Media gallery</b><small>{chat.title}</small></span></div><button onClick={onClose}><X /></button></header>
-        <div className="media-gallery-grid">
-          {items.map((item, index) => {
-            const url = assetUrl(item.fileUrl);
-            return <button key={item.id} onClick={() => setLightboxIndex(index)}>{item.mimeType?.startsWith('video/') ? <video src={url} preload="metadata" /> : <img src={url} alt={item.fileName || 'Media'} loading="lazy" />}</button>;
-          })}
+        <header><div><ImageIcon /><span><b>Files</b><small>{chat.title}</small></span></div><button onClick={onClose}><X /></button></header>
+        <div className="file-tabs">
+          {['media', 'files', 'links', 'voice'].map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setLightboxIndex(null); }}>{item}</button>)}
         </div>
-        {hasMore && <button className="gallery-more" disabled={loading} onClick={() => load()}>{loading ? <Loader2 className="spin" /> : null}Load more</button>}
+        {tab === 'media' ? (
+          <div className="media-gallery-grid">
+            {items.map((item, index) => {
+              const url = assetUrl(item.fileUrl);
+              return <button key={item.id} onClick={() => setLightboxIndex(index)}>{item.mimeType?.startsWith('video/') ? <video src={url} preload="metadata" /> : <img src={url} alt={item.fileName || 'Media'} loading="lazy" />}</button>;
+            })}
+          </div>
+        ) : (
+          <div className="file-list-tab">
+            {selectedList.map((item, index) => {
+              const url = urlFromMessage(item);
+              return <a key={item.id || index} href={url || '#'} target={tab === 'links' ? '_blank' : undefined} rel="noreferrer" download={tab !== 'links' ? item.fileName || undefined : undefined}><FileText /><span><b>{item.fileName || item.body || 'Item'}</b><small>{formatTime(item.createdAt)}</small></span></a>;
+            })}
+            {!selectedList.length && <p className="empty-tab">No {tab} yet.</p>}
+          </div>
+        )}
+        {tab === 'media' && hasMore && <button className="gallery-more" disabled={loading} onClick={() => load()}>{loading ? <Loader2 className="spin" /> : null}Load more</button>}
       </section>
 
-      {selected && (
+      {selected && selectedUrl && tab === 'media' && (
         <div className="lightbox">
           <button className="lightbox-close" onClick={() => setLightboxIndex(null)}><X /></button>
           <button className="lightbox-prev" disabled={lightboxIndex <= 0} onClick={() => setLightboxIndex((value) => value - 1)}><ChevronLeft /></button>
           {selected.mimeType?.startsWith('video/') ? <video src={selectedUrl} controls autoPlay /> : <img src={selectedUrl} alt={selected.fileName || 'Media'} />}
-          <button className="lightbox-next" disabled={lightboxIndex >= items.length - 1} onClick={() => setLightboxIndex((value) => value + 1)}><ChevronRight /></button>
+          <button className="lightbox-next" disabled={lightboxIndex >= selectedList.length - 1} onClick={() => setLightboxIndex((value) => value + 1)}><ChevronRight /></button>
           <a href={selectedUrl} download={selected.fileName || undefined}><Download />Download</a>
         </div>
       )}
