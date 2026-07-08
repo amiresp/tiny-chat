@@ -14,17 +14,19 @@
 .conversation.edge-swiping,.conversation.edge-completing{will-change:transform,opacity,border-radius;box-shadow:0 0 0 1px rgba(255,255,255,.55),-22px 0 60px rgba(10,40,31,.2)}
 .conversation.edge-swiping[data-edge="left"]{transform:translate3d(calc(var(--edge-swipe) * .88),0,0) scale(calc(1 - (var(--edge-swipe) / 5200)));border-radius:22px 0 0 22px}
 .conversation.edge-swiping[data-edge="right"]{transform:translate3d(calc(var(--edge-swipe) * -.88),0,0) scale(calc(1 - (var(--edge-swipe) / 5200)));border-radius:0 22px 22px 0}
-.conversation.edge-completing{transition:transform .2s var(--ease-soft),opacity .2s ease,border-radius .2s ease;opacity:.62}
-.conversation.edge-completing[data-edge="left"]{transform:translate3d(100vw,0,0) scale(.98);border-radius:22px 0 0 22px}
-.conversation.edge-completing[data-edge="right"]{transform:translate3d(-100vw,0,0) scale(.98);border-radius:0 22px 22px 0}
 .conversation.edge-swiping:before{content:"";position:absolute;inset:0;z-index:80;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,0));opacity:.8}
 .conversation.edge-swiping[data-edge="right"]:before{background:linear-gradient(270deg,rgba(255,255,255,.28),rgba(255,255,255,0))}
+.conversation.edge-source-hidden{opacity:0!important;pointer-events:none!important}
+.swipe-back-ghost{overflow:hidden!important;background:#f5faf7!important;box-shadow:0 24px 80px rgba(9,38,29,.28)!important;border-radius:22px!important;transform:translate3d(var(--ghost-start),0,0) scale(.985);opacity:1;will-change:transform,opacity;transition:transform .24s var(--ease-soft),opacity .24s ease!important}
+.swipe-back-ghost.leaving[data-edge="left"]{transform:translate3d(105vw,0,0) scale(.96);opacity:.25}
+.swipe-back-ghost.leaving[data-edge="right"]{transform:translate3d(-105vw,0,0) scale(.96);opacity:.25}
+.swipe-back-ghost *{pointer-events:none!important}
 
 /* Chat header and menu must always sit above virtualized messages. */
 .conversation-head{position:relative;z-index:120;overflow:visible;box-shadow:0 1px 0 rgba(24,51,43,.05)}
 .head-actions,.conversation-actions{position:relative;z-index:130}
-.conversation-menu{position:absolute;right:0;left:auto;z-index:400;top:50px;width:240px;padding:7px;border-radius:16px;box-shadow:0 22px 64px rgba(13,45,35,.28);transform-origin:top right;animation:verdant-menu-in .16s ease-out;max-height:min(520px,calc(100dvh - 92px));overflow-y:auto;overscroll-behavior:contain}
-.conversation-menu:before{content:"";position:absolute;top:-6px;right:15px;width:12px;height:12px;background:#fff;border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+.conversation-menu{position:fixed!important;z-index:600!important;padding:7px;border-radius:16px;box-shadow:0 22px 64px rgba(13,45,35,.28);transform-origin:top right;animation:verdant-menu-in .16s ease-out;overflow-y:auto;overscroll-behavior:contain;background:#fff}
+.conversation-menu:before{display:none!important}
 .conversation-menu button{position:relative;z-index:1;min-height:42px;font-size:13px;font-weight:600;transition:background .15s ease,color .15s ease,transform .15s ease}
 .conversation-menu button:hover{transform:translateX(-1px)}
 .conversation-menu button+button{margin-top:2px}
@@ -120,7 +122,7 @@
 
 @media(max-width:760px){
   .conversation-head{z-index:140}
-  .conversation-menu{position:fixed;top:70px;right:10px;left:10px;width:auto;max-height:calc(100dvh - 150px);border-radius:18px;padding:8px;box-shadow:0 24px 72px rgba(8,35,27,.34);transform-origin:top center}
+  .conversation-menu{position:fixed!important;top:auto;right:auto;left:auto;width:auto;max-height:calc(100dvh - 150px);border-radius:18px;padding:8px;box-shadow:0 24px 72px rgba(8,35,27,.34);transform-origin:top center}
   .conversation-menu:before{display:none}
   .conversation-menu button{min-height:46px;padding:12px 13px;font-size:14px}
 
