@@ -2,13 +2,63 @@ import './ux-guards.css';
 import { apiOrigin } from './runtime';
 
 let activeChatId = null;
+let latestChats = [];
+let restoreAttempts = 0;
 const originalFetch = window.fetch.bind(window);
+
+function setRouteState(next = {}) {
+  const params = new URLSearchParams(window.location.search);
+  if (next.chat) {
+    params.set('chat', String(next.chat));
+    localStorage.setItem('verdant-last-chat-id', String(next.chat));
+  }
+  if (next.view) params.set('view', String(next.view));
+  const query = params.toString();
+  const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+  if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+    window.history.replaceState(window.history.state, '', url);
+  }
+}
+
+function wantedChatId() {
+  const params = new URLSearchParams(window.location.search);
+  return Number(params.get('chat') || localStorage.getItem('verdant-last-chat-id') || 0) || null;
+}
+
+function safeCloneJson(response) {
+  try {
+    return response.clone().json().catch(() => null);
+  } catch {
+    return Promise.resolve(null);
+  }
+}
 
 window.fetch = async (...args) => {
   const raw = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-  const match = String(raw).match(/\/api\/(?:v2\/)?chats\/(\d+)\//);
-  if (match) activeChatId = Number(match[1]);
-  return originalFetch(...args);
+  const method = String(args[1]?.method || args[0]?.method || 'GET').toUpperCase();
+  const url = String(raw);
+  const chatMatch = url.match(/\/api\/(?:v2\/)?chats\/(\d+)\//);
+  if (chatMatch) {
+    activeChatId = Number(chatMatch[1]);
+    setRouteState({ chat: activeChatId, view: 'chat' });
+  }
+
+  const response = await originalFetch(...args);
+
+  if (/\/api\/v2\/chats(?:\?|$)/.test(url) && method === 'GET') {
+    safeCloneJson(response).then((data) => {
+      latestChats = Array.isArray(data?.chats) ? data.chats : [];
+      if (latestChats.length) localStorage.setItem('verdant-chat-cache', JSON.stringify(latestChats.map((chat) => ({ id: chat.id, title: chat.title }))));
+      restoreChatFromUrl();
+    });
+  }
+
+  if (/\/api\/v2\/messages\/\d+/.test(url) && method === 'DELETE') {
+    setTimeout(cleanupMessages, 120);
+    setTimeout(cleanupMessages, 600);
+  }
+
+  return response;
 };
 
 function toast(message) {
@@ -30,18 +80,53 @@ function cleanupMessages() {
     const id = node.getAttribute('data-message-id');
     if (!id || id === 'undefined' || id === 'null') return;
     const text = node.textContent || '';
-    if (seen.has(id) || /Message deleted/i.test(text)) {
-      node.remove();
+    const shouldHide = seen.has(id) || /Message deleted/i.test(text);
+    if (shouldHide) {
+      node.classList.add('ux-hidden-message');
+      node.setAttribute('aria-hidden', 'true');
       return;
     }
     seen.add(id);
+    node.classList.remove('ux-hidden-message');
+    node.removeAttribute('aria-hidden');
   });
 }
 
 const observer = new MutationObserver(cleanupMessages);
-observer.observe(document.documentElement, { childList: true, subtree: true });
+observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
 window.addEventListener('focus', cleanupMessages);
 setInterval(cleanupMessages, 1800);
+
+function cachedChats() {
+  if (latestChats.length) return latestChats;
+  try {
+    return JSON.parse(localStorage.getItem('verdant-chat-cache') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function restoreChatFromUrl() {
+  const chatId = wantedChatId();
+  if (!chatId || activeChatId === chatId) return;
+  const chat = cachedChats().find((item) => Number(item.id) === Number(chatId));
+  if (!chat?.title) return;
+  const rows = [...document.querySelectorAll('.chat-row')];
+  const row = rows.find((item) => (item.textContent || '').includes(chat.title));
+  if (row) {
+    activeChatId = chatId;
+    setRouteState({ chat: chatId, view: 'chat' });
+    row.click();
+    return;
+  }
+  if (restoreAttempts < 30) {
+    restoreAttempts += 1;
+    setTimeout(restoreChatFromUrl, 350);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => setTimeout(restoreChatFromUrl, 700));
+window.addEventListener('popstate', () => setTimeout(restoreChatFromUrl, 120));
 
 function formatSize(bytes) {
   if (!Number.isFinite(bytes)) return '';
