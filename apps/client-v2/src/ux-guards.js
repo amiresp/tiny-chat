@@ -33,6 +33,25 @@ function safeCloneJson(response) {
   }
 }
 
+function showErrorFallback(error) {
+  if (document.querySelector('.ux-error-fallback')) return;
+  const layer = document.createElement('div');
+  layer.className = 'ux-error-fallback';
+  layer.innerHTML = `
+    <section class="ux-error-card">
+      <h2>Something went wrong</h2>
+      <p>The app recovered your last chat in the URL. Reload the page to continue from the same place.</p>
+      <small>${String(error?.message || error || 'Unknown error').slice(0, 180)}</small>
+      <button type="button">Reload app</button>
+    </section>
+  `;
+  layer.querySelector('button').addEventListener('click', () => window.location.reload());
+  document.body.appendChild(layer);
+}
+
+window.addEventListener('error', (event) => showErrorFallback(event.error || event.message));
+window.addEventListener('unhandledrejection', (event) => showErrorFallback(event.reason));
+
 window.fetch = async (...args) => {
   const raw = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
   const method = String(args[1]?.method || args[0]?.method || 'GET').toUpperCase();
