@@ -36,6 +36,38 @@ function personalizeDirectChat(chat, peer) {
   };
 }
 
+async function ensureSavedMessagesChat(userId) {
+  const [existing] = await db.select({ id: chats.id })
+    .from(chats)
+    .innerJoin(chatMembers, eq(chatMembers.chatId, chats.id))
+    .where(and(
+      eq(chats.type, 'saved'),
+      eq(chats.ownerId, userId),
+      eq(chatMembers.userId, userId),
+    ))
+    .limit(1);
+
+  if (existing) return existing.id;
+
+  const now = new Date();
+  const [chat] = await db.insert(chats).values({
+    type: 'saved',
+    title: 'Saved Messages',
+    ownerId: userId,
+    createdAt: now,
+    updatedAt: now,
+  }).returning();
+
+  await db.insert(chatMembers).values({
+    chatId: chat.id,
+    userId,
+    joinedAt: now,
+    pinnedAt: now,
+  }).onConflictDoNothing();
+
+  return chat.id;
+}
+
 async function enrichChats(list, currentUserId) {
   const directIds = list.filter((chat) => chat.type === 'direct').map((chat) => Number(chat.id));
   let peerByChatId = new Map();
@@ -62,8 +94,9 @@ async function enrichChats(list, currentUserId) {
   const now = Date.now();
   return list.map((chat) => ({
     ...personalizeDirectChat(chat, peerByChatId.get(Number(chat.id))),
+    title: chat.type === 'saved' ? 'Saved Messages' : (chat.title || `${chat.type} chat`),
     unreadCount: Number(chat.unreadCount || 0),
-    pinned: Boolean(chat.pinnedAt),
+    pinned: chat.type === 'saved' ? true : Boolean(chat.pinnedAt),
     archived: Boolean(chat.archivedAt),
     muted: Boolean(chat.mutedUntil && new Date(chat.mutedUntil).getTime() > now),
   }));
@@ -87,6 +120,8 @@ export function createChatFeatureRouter({ io = null } = {}) {
 
   router.get('/chats', auth, route(async (request, response) => {
     const userId = Number(request.user.id);
+    await ensureSavedMessagesChat(userId);
+
     const unreadCount = sql`(
       SELECT COUNT(*)
       FROM messages AS unread_messages
