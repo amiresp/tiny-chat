@@ -50,8 +50,8 @@ jobs:
 
       - name: Validate client helpers
         run: |
-          node --check apps/client/src/feature-pack-ui.js
           node --check apps/client/src/profile-page.js
+          node --check apps/client/src/admin-restore.js
 
       - name: Build web client
         run: npm run build -w @verdant/client
