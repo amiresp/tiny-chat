@@ -43,6 +43,7 @@ jobs:
           node --check apps/server/src/feature-interactions.js
           node --check apps/server/src/feature-message-pages.js
           node --check apps/server/src/feature-media.js
+          node --check apps/server/src/feature-retention.js
           node --check apps/server/src/feature-rss-proxy.js
           node --check apps/server/src/feature-pack.js
           node --check apps/server/src/feature-online.js
@@ -54,6 +55,10 @@ jobs:
           node --check apps/client/src/profile-page.js
           node --check apps/client/src/admin-restore.js
           node --check apps/client/src/settings-privacy-sessions.js
+
+      - name: Validate Ionic client helpers
+        run: |
+          node --check apps/client-v2/src/ux-guards.js
 
       - name: Build Ionic client v2
         run: npm run build -w @verdant/client-v2
