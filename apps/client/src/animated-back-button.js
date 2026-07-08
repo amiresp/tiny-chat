@@ -1,4 +1,5 @@
 let locked = false;
+const EXIT_MS = 220;
 
 function isMobile() {
   return window.matchMedia('(max-width: 760px)').matches;
@@ -8,34 +9,19 @@ function animateBack(button) {
   if (locked || !isMobile()) return false;
 
   const conversation = document.querySelector('.conversation:not(.mobile-hidden)');
-  if (!conversation || conversation.classList.contains('edge-swiping')) return false;
+  if (!conversation || conversation.classList.contains('edge-swiping') || conversation.classList.contains('edge-completing')) return false;
 
   locked = true;
-  const rect = conversation.getBoundingClientRect();
-  const ghost = conversation.cloneNode(true);
-  ghost.classList.add('swipe-back-ghost');
-  ghost.dataset.edge = 'left';
-  ghost.style.position = 'fixed';
-  ghost.style.left = `${rect.left}px`;
-  ghost.style.top = `${rect.top}px`;
-  ghost.style.width = `${rect.width}px`;
-  ghost.style.height = `${rect.height}px`;
-  ghost.style.margin = '0';
-  ghost.style.zIndex = '999';
-  ghost.style.pointerEvents = 'none';
-  ghost.style.setProperty('--ghost-start', '0px');
-  document.body.appendChild(ghost);
-  conversation.classList.add('edge-source-hidden');
+  conversation.classList.add('edge-completing');
+  conversation.dataset.edge = 'left';
+  conversation.style.setProperty('--edge-swipe', '110px');
 
-  button.dataset.animatedBackBypass = '1';
-  button.click();
-  delete button.dataset.animatedBackBypass;
-
-  requestAnimationFrame(() => ghost.classList.add('leaving'));
   window.setTimeout(() => {
-    ghost.remove();
+    button.dataset.animatedBackBypass = '1';
+    button.click();
+    delete button.dataset.animatedBackBypass;
     locked = false;
-  }, 260);
+  }, EXIT_MS);
 
   return true;
 }
