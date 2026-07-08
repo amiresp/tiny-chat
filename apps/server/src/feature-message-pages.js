@@ -195,8 +195,8 @@ export function createMessagePageRouter() {
     const limit = integer(request.query.limit, 40, 80);
     const before = integer(request.query.before, null);
     const where = before
-      ? 'WHERE m.chat_id = ? AND m.id < ?'
-      : 'WHERE m.chat_id = ?';
+      ? 'WHERE m.chat_id = ? AND m.deleted_at IS NULL AND m.id < ?'
+      : 'WHERE m.chat_id = ? AND m.deleted_at IS NULL';
     const params = before ? [chatId, before, limit + 1] : [chatId, limit + 1];
     const rows = sqlite.prepare(`${messageQuery(where)} ORDER BY m.id DESC LIMIT ?`).all(...params);
     const hasMore = rows.length > limit;
