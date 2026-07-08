@@ -7,6 +7,7 @@ const stack = [];
 let currentUser = null;
 let screen = null;
 let hostSidebar = null;
+let adminLoaded = false;
 let adminState = { tab: 'overview', users: [], online: [], chats: [], messages: [], selectedChat: null, query: '', busy: false, error: '' };
 
 function assetUrl(value) {
@@ -324,6 +325,7 @@ function renderEdit(root, user) {
 }
 
 async function loadAdminData({ keepTab = true } = {}) {
+  if (adminState.busy) return;
   adminState = { ...adminState, busy: true, error: '', selectedChat: keepTab ? adminState.selectedChat : null };
   renderCurrent();
   try {
@@ -332,8 +334,10 @@ async function loadAdminData({ keepTab = true } = {}) {
       request('/api/admin/chats'),
       request('/api/v2/admin/online-users'),
     ]);
+    adminLoaded = true;
     adminState = { ...adminState, users: usersData.users || [], chats: chatsData.chats || [], online: onlineData.users || [], busy: false, error: '' };
   } catch (error) {
+    adminLoaded = true;
     adminState = { ...adminState, busy: false, error: error.message };
   }
   renderCurrent();
@@ -387,7 +391,7 @@ function renderAdmin(root) {
   refresh.addEventListener('click', () => loadAdminData());
   content.append(tabs, refresh);
   if (adminState.error) content.insertAdjacentHTML('beforeend', notice(adminState.error));
-  if (!adminState.users.length && !adminState.chats.length && !adminState.online.length && !adminState.busy) {
+  if (!adminLoaded && !adminState.busy) {
     loadAdminData();
   }
   if (adminState.busy) {
