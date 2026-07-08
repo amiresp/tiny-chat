@@ -114,7 +114,6 @@ async function openChatInfo() {
     });
     body.querySelector('[data-saved]')?.addEventListener('click', openSavedItems);
     body.querySelector('[data-sessions]')?.addEventListener('click', openSessions);
-    body.querySelector('[data-privacy]?.addEventListener');
     body.querySelector('[data-privacy]')?.addEventListener('click', openPrivacy);
   } catch (error) {
     body.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
