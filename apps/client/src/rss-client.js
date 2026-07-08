@@ -1,3 +1,5 @@
+import { api } from './api';
+
 function text(node, selector) {
   return node.querySelector(selector)?.textContent?.trim() || '';
 }
@@ -54,23 +56,14 @@ function atomEntry(entry, index) {
   };
 }
 
+async function loadXmlViaProxy(url) {
+  const data = await api(`/api/v2/rss/proxy?url=${encodeURIComponent(url)}`);
+  if (!data.xml) throw new Error('RSS proxy returned an empty response.');
+  return data.xml;
+}
+
 export async function loadRssFeed(url) {
-  let response;
-  try {
-    response = await fetch(url, {
-      headers: {
-        Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*;q=0.5',
-      },
-    });
-  } catch {
-    throw new Error('The RSS server blocked browser access (CORS) or is unavailable.');
-  }
-
-  if (!response.ok) {
-    throw new Error(`RSS server returned HTTP ${response.status}`);
-  }
-
-  const xml = await response.text();
+  const xml = await loadXmlViaProxy(url);
   const documentValue = new DOMParser().parseFromString(xml, 'application/xml');
   if (documentValue.querySelector('parsererror')) {
     throw new Error('The URL did not return valid RSS or Atom XML.');
@@ -81,6 +74,10 @@ export async function loadRssFeed(url) {
   const items = rssItems.length
     ? rssItems.map(rssItem)
     : atomItems.map(atomEntry);
+
+  if (!items.length) {
+    throw new Error('No RSS or Atom entries were found in this feed.');
+  }
 
   return {
     title: text(documentValue, 'channel > title') || text(documentValue, 'feed > title'),
