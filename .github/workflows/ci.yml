@@ -49,11 +49,11 @@ jobs:
           node --check apps/server/src/feature-avatar.js
           node --check apps/server/src/heartbeat-state.js
 
-      - name: Validate client helpers
+      - name: Validate legacy client helpers
         run: |
           node --check apps/client/src/profile-page.js
           node --check apps/client/src/admin-restore.js
           node --check apps/client/src/settings-privacy-sessions.js
 
-      - name: Build web client
-        run: npm run build -w @verdant/client
+      - name: Build Ionic client v2
+        run: npm run build -w @verdant/client-v2
