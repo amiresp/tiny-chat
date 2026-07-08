@@ -39,7 +39,12 @@ function messageQuery(where) {
       reply.file_name AS reply_file_name,
       reply.deleted_at AS reply_deleted_at,
       reply_sender.username AS reply_sender_username,
-      reply_sender.display_name AS reply_sender_name
+      reply_sender.display_name AS reply_sender_name,
+      (
+        SELECT MAX(r.read_at)
+        FROM receipts r
+        WHERE r.message_id = m.id AND r.read_at IS NOT NULL
+      ) AS read_at
     FROM messages m
     INNER JOIN users sender ON sender.id = m.sender_id
     LEFT JOIN messages reply ON reply.id = m.reply_to_id
@@ -81,6 +86,7 @@ function mapMessage(row) {
     editedAt: row.edited_at,
     deletedAt: row.deleted_at,
     deliveredAt: row.delivered_at,
+    readAt: row.read_at,
     failedAt: row.failed_at,
     createdAt: row.created_at,
     reactions: [],
@@ -128,6 +134,7 @@ function getMessage(id, userId) {
 
 function markRead(messages, userId) {
   const now = Date.now();
+  const changed = [];
   const statement = sqlite.prepare(`
     INSERT INTO receipts (message_id, user_id, delivered_at, read_at)
     VALUES (?, ?, ?, ?)
@@ -138,10 +145,19 @@ function markRead(messages, userId) {
     for (const message of items) {
       if (Number(message.senderId) !== Number(userId)) {
         statement.run(message.id, userId, now, now);
+        changed.push(message.id);
       }
     }
   });
   transaction(messages);
+
+  const io = getFeatureIo();
+  if (io && changed.length) {
+    for (const messageId of changed) {
+      const updated = getMessage(messageId, userId);
+      if (updated) io.to(`chat:${updated.chatId}`).emit('message:status', updated);
+    }
+  }
 }
 
 function canSendToChat(chatId, senderId) {
