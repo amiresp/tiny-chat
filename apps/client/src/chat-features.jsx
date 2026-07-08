@@ -8,14 +8,12 @@ import {
   Loader2,
   MessageSquareReply,
   MoreHorizontal,
-  SmilePlus,
   Trash2,
   X,
 } from 'lucide-react';
 import { apiOrigin } from './runtime';
 import './chat-features.css';
 
-const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥'];
 const ESTIMATED_HEIGHT = 132;
 const OVERSCAN = 8;
 const REPLY_SWIPE_THRESHOLD = 62;
@@ -34,23 +32,14 @@ function formatTime(value) {
     : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function MessageActions({ message, mine, onReply, onEdit, onDelete, onReact }) {
+function MessageActions({ message, mine, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
-  const [reactions, setReactions] = useState(false);
 
-  if (message.deletedAt) return null;
+  if (message.deletedAt || !mine) return null;
 
   return (
-    <div className="message-actions">
-      <button title="Reply" onClick={() => onReply(message)}><MessageSquareReply /></button>
-      <button title="React" onClick={() => setReactions((value) => !value)}><SmilePlus /></button>
-      {mine && <button title="More" onClick={() => setOpen((value) => !value)}><MoreHorizontal /></button>}
-
-      {reactions && (
-        <div className="reaction-picker">
-          {REACTIONS.map((emoji) => <button key={emoji} onClick={() => { onReact(message, emoji); setReactions(false); }}>{emoji}</button>)}
-        </div>
-      )}
+    <div className="message-actions compact-actions">
+      <button title="More" onClick={() => setOpen((value) => !value)}><MoreHorizontal /></button>
 
       {open && (
         <div className="message-action-menu">
@@ -62,7 +51,7 @@ function MessageActions({ message, mine, onReply, onEdit, onDelete, onReact }) {
   );
 }
 
-function MessageBubble({ message, user, onReply, onEdit, onDelete, onReact, onOpenMedia }) {
+function MessageBubble({ message, user, onReply, onEdit, onDelete, onOpenMedia }) {
   const mine = Number(message.senderId) === Number(user.id);
   const url = assetUrl(message.fileUrl);
   const image = message.mimeType?.startsWith('image/');
@@ -146,7 +135,7 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onReact, onOp
       )}
 
       <div className={`bubble ${mine ? 'mine' : ''} ${message.deletedAt ? 'deleted' : ''}`}>
-        <MessageActions message={message} mine={mine} onReply={onReply} onEdit={onEdit} onDelete={onDelete} onReact={onReact} />
+        <MessageActions message={message} mine={mine} onEdit={onEdit} onDelete={onDelete} />
 
         {message.replyTo && (
           <button className="reply-preview" onClick={() => document.querySelector(`[data-message-id="${message.replyTo.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
@@ -169,11 +158,11 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onReact, onOp
         )}
 
         {message.reactions?.length > 0 && (
-          <div className="message-reactions">
+          <div className="message-reactions read-only-reactions">
             {message.reactions.map((reaction) => (
-              <button key={reaction.emoji} className={reaction.reacted ? 'reacted' : ''} onClick={() => onReact(message, reaction.emoji)}>
-                {reaction.emoji}<span>{reaction.count}</span>
-              </button>
+              <span key={reaction.emoji} className={reaction.reacted ? 'reacted' : ''}>
+                {reaction.emoji}<small>{reaction.count}</small>
+              </span>
             ))}
           </div>
         )}
@@ -243,7 +232,7 @@ export function VirtualMessageList({
       <div style={{ height: topSpace }} aria-hidden="true" />
       {visible.map((message) => (
         <div key={message.id || message.clientId} data-message-id={message.id} className="virtual-message-item">
-          <MessageBubble message={message} user={user} onReply={onReply} onEdit={onEdit} onDelete={onDelete} onReact={onReact} onOpenMedia={onOpenMedia} />
+          <MessageBubble message={message} user={user} onReply={onReply} onEdit={onEdit} onDelete={onDelete} onOpenMedia={onOpenMedia} />
         </div>
       ))}
       <div style={{ height: bottomSpace }} aria-hidden="true" />
