@@ -250,7 +250,16 @@ function shouldOpenProfile(target) {
     || Boolean(target.closest('.mobile-bottom-navigation button:nth-child(2)'));
 }
 
+function shouldCloseProfileFromChats(target) {
+  return Boolean(target.closest('.mobile-bottom-navigation button:nth-child(1)'));
+}
+
 document.addEventListener('click', (event) => {
+  if (shouldCloseProfileFromChats(event.target)) {
+    closeProfile();
+    return;
+  }
+
   if (!shouldOpenProfile(event.target)) return;
   event.preventDefault();
   event.stopPropagation();
