@@ -7,9 +7,11 @@ import { createMessagePageRouter } from './feature-message-pages.js';
 import { createRssProxyRouter } from './feature-rss-proxy.js';
 import { createFeaturePackRouter } from './feature-pack.js';
 import { createMediaFeatureRouter } from './feature-media.js';
+import { createRetentionRouter } from './feature-retention.js';
 
 export function createFeatureRouter({ io }) {
   const router = express.Router();
+  router.use(createRetentionRouter());
   router.use(createRssProxyRouter());
   router.use(createFeaturePackRouter());
   router.use(createMessagePageRouter());
