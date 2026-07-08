@@ -5,6 +5,7 @@ import EmojiPicker from 'emoji-picker-react';
 import {
   Archive,
   ArchiveRestore,
+  Bookmark,
   CalendarDays,
   Check,
   ExternalLink,
@@ -71,6 +72,10 @@ function formatPresence(peer) {
 function formatDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Unknown date' : date.toLocaleString();
+}
+
+function draftKey(chatId) {
+  return `verdant-draft-${chatId}`;
 }
 
 function Avatar({ entity, icon, className = '' }) {
@@ -194,6 +199,42 @@ function NewChat({ onClose, onCreated }) {
   );
 }
 
+function ChatSearchModal({ chat, onClose }) {
+  const [term, setTerm] = useState('');
+  const [results, setResults] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!term.trim()) { setResults([]); return undefined; }
+    const timer = setTimeout(() => {
+      api(`/api/v2/chats/${chat.id}/search?q=${encodeURIComponent(term.trim())}`)
+        .then((data) => { setResults(data.messages || []); setError(''); })
+        .catch((requestError) => setError(requestError.message));
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [term, chat.id]);
+
+  return (
+    <div className="modal"><section className="chat-search-modal"><header><h3>Search in {chat.title}</h3><button onClick={onClose}><X /></button></header><div className="search"><Search /><input autoFocus placeholder="Search messages…" value={term} onChange={(event) => setTerm(event.target.value)} /></div>{error && <p className="error">{error}</p>}<div className="chat-search-results">{results.map((message) => <button key={message.id} onClick={() => document.querySelector(`[data-message-id="${message.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><b>{message.body || message.fileName || 'Message'}</b><small>{formatDate(message.createdAt)}</small></button>)}{term && !results.length && !error && <p>No results.</p>}</div></section></div>
+  );
+}
+
+function ForwardModal({ chats, activeChat, selectedIds, onClose, onForward }) {
+  return (
+    <div className="modal"><section className="forward-modal"><header><h3>Forward {selectedIds.length} message{selectedIds.length > 1 ? 's' : ''}</h3><button onClick={onClose}><X /></button></header><div className="results">{chats.filter((chat) => chat.type !== 'rss' && Number(chat.id) !== Number(activeChat?.id)).map((chat) => <button key={chat.id} onClick={() => onForward(chat.id)}><Avatar entity={chat} icon={chat.type === 'group' ? <Users /> : null} /><span><b>{chat.title}</b><small>{chat.type === 'saved' ? 'Saved Messages' : chat.type}</small></span></button>)}</div></section></div>
+  );
+}
+
+function ChatInfoModal({ chat, info, onClose, onCreateInvite, onChangeRole, onUnpin }) {
+  return (
+    <div className="modal"><section className="chat-info-modal"><header><div><h3>{chat.title}</h3><small>{chat.type}</small></div><button onClick={onClose}><X /></button></header>{info?.pinnedMessage && <div className="pinned-info"><b>Pinned message</b><span>{info.pinnedMessage.body || info.pinnedMessage.fileName || 'Pinned message'}</span><button onClick={onUnpin}>Unpin</button></div>}<div className="members-list"><h4>Members</h4>{(info?.members || []).map((member) => <article key={member.id}><Avatar entity={{ displayName: member.display_name, username: member.username, avatarUrl: member.avatar_url }} /><span><b>{member.display_name || member.username}</b><small>@{member.username}</small></span>{chat.type === 'group' && <select value={member.role || 'member'} onChange={(event) => onChangeRole(member.id, event.target.value)}><option value="member">member</option><option value="admin">admin</option></select>}</article>)}</div>{chat.type !== 'direct' && <button className="primary" onClick={onCreateInvite}>Create invite link</button>}</section></div>
+  );
+}
+
+function SelectionToolbar({ count, onCancel, onSave, onForward, onPin, onDelete }) {
+  return <div className="selection-toolbar"><b>{count} selected</b><button onClick={onSave}><Bookmark />Save</button><button onClick={onForward}>Forward</button><button onClick={onPin}><Pin />Pin</button><button className="danger" onClick={onDelete}><Trash2 />Delete</button><button onClick={onCancel}><X /></button></div>;
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [chats, setChats] = useState([]);
@@ -215,6 +256,14 @@ function App() {
   const [showGallery, setShowGallery] = useState(false);
   const [showFab, setShowFab] = useState(true);
   const [feedError, setFeedError] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [showForward, setShowForward] = useState(false);
+  const [showChatInfo, setShowChatInfo] = useState(false);
+  const [chatInfo, setChatInfo] = useState(null);
+  const [selectedMessages, setSelectedMessages] = useState(new Set());
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [draftVersion, setDraftVersion] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const socket = useRef(null);
   const file = useRef(null);
@@ -223,12 +272,35 @@ function App() {
   const activeIdRef = useRef(null);
   const chatsRef = useRef([]);
   const chatListRef = useRef(null);
+  const chatPull = useRef(null);
   const activeChat = chats.find((chat) => chat.id === active?.id) || active;
   const unreadTotal = useMemo(() => chats.reduce((total, chat) => total + Number(chat.unreadCount || 0), 0), [chats]);
+  const selectionMode = selectedMessages.size > 0;
 
   useEffect(() => { activeIdRef.current = active?.id || null; }, [active?.id]);
   useEffect(() => { chatsRef.current = chats; }, [chats]);
   useEffect(() => { if (getToken()) api('/api/me').then((data) => setUser(data.user)).catch(() => setToken(null)); }, []);
+
+  useEffect(() => {
+    if (!activeChat || activeChat.type === 'rss') return;
+    if (text.trim()) localStorage.setItem(draftKey(activeChat.id), text);
+    else localStorage.removeItem(draftKey(activeChat.id));
+    setDraftVersion((value) => value + 1);
+  }, [text, activeChat?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    const match = location.pathname.match(/^\/invite\/([^/]+)/);
+    if (!match) return;
+    api(`/api/v2/invites/${encodeURIComponent(match[1])}/join`, { method: 'POST' })
+      .then(async (data) => {
+        history.replaceState({}, '', '/');
+        await loadChats();
+        const chat = chatsRef.current.find((item) => Number(item.id) === Number(data.chatId));
+        if (chat) openChat(chat);
+      })
+      .catch((error) => alert(error.message));
+  }, [user?.id]);
 
   function upsertMessage(message) {
     setMessages((current) => {
@@ -245,7 +317,7 @@ function App() {
     loadChats();
     const currentSocket = io(socketOrigin, { auth: { token: getToken() }, reconnection: true });
     socket.current = currentSocket;
-    currentSocket.on('connect', () => { setStatus('connected'); flush(currentSocket); });
+    currentSocket.on('connect', () => { setStatus('connected'); flush(); });
     currentSocket.on('disconnect', () => setStatus(navigator.onLine ? 'updating' : 'offline'));
     currentSocket.on('connect_error', () => setStatus(navigator.onLine ? 'updating' : 'offline'));
     currentSocket.on('chat:new', (chat) => setChats((current) => [{ ...chat, unreadCount: Number(chat.unreadCount || 0) }, ...current.filter((item) => item.id !== chat.id)]));
@@ -257,8 +329,10 @@ function App() {
       setChats((current) => { const found = current.find((chat) => Number(chat.id) === Number(message.chatId)); if (!found) return current; const updated = { ...found, updatedAt: message.createdAt || new Date().toISOString(), unreadCount: isActive || message.senderId === user.id ? 0 : Number(found.unreadCount || 0) + 1 }; return [updated, ...current.filter((chat) => Number(chat.id) !== Number(message.chatId))]; });
     });
     currentSocket.on('message:updated', upsertMessage);
+    currentSocket.on('message:status', upsertMessage);
     currentSocket.on('message:deleted', ({ id, deletedAt }) => setMessages((current) => current.map((message) => Number(message.id) === Number(id) ? { ...message, type: 'deleted', body: null, fileUrl: null, mimeType: null, deletedAt, reactions: [] } : message)));
     currentSocket.on('message:reactions', ({ messageId, reactions }) => setMessages((current) => current.map((message) => Number(message.id) === Number(messageId) ? { ...message, reactions } : message)));
+    currentSocket.on('chat:pinned-message', ({ chatId, message }) => { if (Number(chatId) === Number(activeIdRef.current)) setChatInfo((current) => ({ ...(current || {}), pinnedMessage: message })); });
     const timer = setInterval(loadChats, 20000);
     const onlineHandler = () => setStatus(currentSocket.connected ? 'connected' : 'updating');
     const offlineHandler = () => setStatus('offline');
@@ -272,8 +346,21 @@ function App() {
       const data = await api('/api/v2/chats');
       setChats(data.chats || []);
       await cacheChats(data.chats || []);
+      return data.chats || [];
     } catch {
-      setChats(await offlineDb.chats.orderBy('updatedAt').reverse().toArray());
+      const offline = await offlineDb.chats.orderBy('updatedAt').reverse().toArray();
+      setChats(offline);
+      return offline;
+    }
+  }
+
+  async function refreshAll() {
+    try {
+      setRefreshing(true);
+      await loadChats();
+      if (activeChat) await openChat(activeChat, { preserveDraft: true });
+    } finally {
+      setRefreshing(false);
     }
   }
 
@@ -286,16 +373,32 @@ function App() {
     setHasMore(data.hasMore);
   }
 
-  async function openChat(chat) {
+  async function loadChatInfo(chatId) {
+    if (!chatId) return null;
+    try {
+      const data = await api(`/api/v2/chats/${chatId}/info`);
+      setChatInfo(data);
+      return data;
+    } catch {
+      setChatInfo(null);
+      return null;
+    }
+  }
+
+  async function openChat(chat, options = {}) {
     setActive(chat);
     setMessages([]);
     setReplyTo(null);
     setFeedError('');
     setShowGallery(false);
+    setShowActions(false);
+    setSelectedMessages(new Set());
+    setText(options.preserveDraft ? text : (chat.type !== 'rss' ? localStorage.getItem(draftKey(chat.id)) || '' : ''));
     setChats((current) => current.map((item) => item.id === chat.id ? { ...item, unreadCount: 0 } : item));
     try {
       if (chat.type === 'rss') setMessages((await loadRssFeed(chat.rssUrl)).items);
       else await loadPage(chat.id);
+      await loadChatInfo(chat.id);
     } catch (requestError) {
       setFeedError(requestError.message);
     }
@@ -316,6 +419,8 @@ function App() {
       const data = await api(`/api/v2/chats/${activeChat.id}/messages`, { method: 'POST', body: JSON.stringify({ clientId: crypto.randomUUID(), body: text.trim(), replyToId: replyTo?.id || null }) });
       upsertMessage(data.message);
     }
+    localStorage.removeItem(draftKey(activeChat.id));
+    setDraftVersion((value) => value + 1);
     setText('');
     setReplyTo(null);
   }
@@ -344,6 +449,12 @@ function App() {
     await api(`/api/v2/messages/${message.id}`, { method: 'DELETE' });
   }
 
+  async function deleteSelected() {
+    if (!selectedMessages.size || !window.confirm(`Delete ${selectedMessages.size} selected messages?`)) return;
+    await Promise.all([...selectedMessages].map((id) => api(`/api/v2/messages/${id}`, { method: 'DELETE' }).catch(() => null)));
+    setSelectedMessages(new Set());
+  }
+
   async function reactMessage(message, emoji) {
     const data = await api(`/api/v2/messages/${message.id}/reactions`, { method: 'POST', body: JSON.stringify({ emoji }) });
     setMessages((current) => current.map((item) => item.id === message.id ? { ...item, reactions: data.reactions } : item));
@@ -358,11 +469,29 @@ function App() {
   }
 
   async function uploadFile(blob, name, type = 'file') {
+    if (!activeChat) return;
     const formData = new FormData();
     formData.append('file', blob, name);
     formData.append('clientId', crypto.randomUUID());
     formData.append('type', type);
-    await api(`/api/chats/${activeChat.id}/files`, { method: 'POST', body: formData });
+    setUploadProgress({ name, percent: 1, status: 'uploading' });
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${apiOrigin}/api/chats/${activeChat.id}/files`);
+      xhr.setRequestHeader('Authorization', `Bearer ${getToken()}`);
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+        setUploadProgress({ name, percent: Math.max(1, Math.round((event.loaded / event.total) * 100)), status: 'uploading' });
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error('Upload failed'));
+      };
+      xhr.onerror = () => reject(new Error('Upload failed'));
+      xhr.send(formData);
+    });
+    setUploadProgress({ name, percent: 100, status: 'done' });
+    window.setTimeout(() => setUploadProgress(null), 800);
   }
 
   async function voice() {
@@ -386,6 +515,78 @@ function App() {
     URL.revokeObjectURL(url);
   }
 
+  function toggleSelected(message) {
+    if (!message?.id) return;
+    setSelectedMessages((current) => {
+      const next = new Set(current);
+      next.has(Number(message.id)) ? next.delete(Number(message.id)) : next.add(Number(message.id));
+      return next;
+    });
+  }
+
+  async function pinMessage(message) {
+    if (!message?.id) return;
+    const data = await api(`/api/v2/messages/${message.id}/pin`, { method: 'POST' });
+    setChatInfo((current) => ({ ...(current || {}), pinnedMessage: data.message }));
+    setSelectedMessages(new Set());
+  }
+
+  async function pinSelected() {
+    const id = [...selectedMessages][0];
+    const message = messages.find((item) => Number(item.id) === Number(id));
+    await pinMessage(message);
+  }
+
+  async function unpinMessage() {
+    if (!activeChat) return;
+    await api(`/api/v2/chats/${activeChat.id}/pinned-message`, { method: 'DELETE' });
+    setChatInfo((current) => ({ ...(current || {}), pinnedMessage: null }));
+  }
+
+  async function forwardMessageToChat(message, chatId) {
+    if (!message?.id || !chatId) return;
+    await api(`/api/v2/messages/${message.id}/forward`, { method: 'POST', body: JSON.stringify({ chatId }) });
+  }
+
+  async function forwardSelectedTo(chatId) {
+    await Promise.all([...selectedMessages].map((id) => forwardMessageToChat(messages.find((item) => Number(item.id) === Number(id)), chatId)));
+    setSelectedMessages(new Set());
+    setShowForward(false);
+    await loadChats();
+  }
+
+  async function saveMessagesToSaved(ids = [...selectedMessages]) {
+    const saved = chats.find((chat) => chat.type === 'saved');
+    if (!saved) return alert('Saved Messages is not ready yet. Refresh chats and try again.');
+    await Promise.all(ids.map((id) => forwardMessageToChat(messages.find((item) => Number(item.id) === Number(id)), saved.id)));
+    setSelectedMessages(new Set());
+    await loadChats();
+  }
+
+  async function createInvite() {
+    if (!activeChat) return;
+    const data = await api(`/api/v2/chats/${activeChat.id}/invites`, { method: 'POST' });
+    await navigator.clipboard?.writeText(`${location.origin}${data.invite.url}`);
+    alert('Invite link copied.');
+  }
+
+  async function changeRole(userId, role) {
+    await api(`/api/v2/chats/${activeChat.id}/roles/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) });
+    await loadChatInfo(activeChat.id);
+  }
+
+  function chatListTouchStart(event) {
+    if (chatListRef.current?.scrollTop > 0 || event.touches.length !== 1) return;
+    chatPull.current = event.touches[0].clientY;
+  }
+
+  function chatListTouchEnd(event) {
+    if (!chatPull.current) return;
+    const diff = event.changedTouches[0].clientY - chatPull.current;
+    chatPull.current = null;
+    if (diff > 70) loadChats();
+  }
+
   if (!user) return <Auth onDone={setUser} />;
 
   const filteredChats = chats.filter((chat) => Boolean(chat.archived) === showArchived && (chat.title || chat.type).toLowerCase().includes(query.toLowerCase()));
@@ -399,20 +600,36 @@ function App() {
         <ConnectionNotice status={status} />
         <div className="search"><Search /><input placeholder="Search chats" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
         <div className="chat-state-tabs"><button className={!showArchived ? 'active' : ''} onClick={() => setShowArchived(false)}>Chats</button><button className={showArchived ? 'active' : ''} onClick={() => setShowArchived(true)}>Archived</button></div>
-        <div className="chat-list" ref={chatListRef} onScroll={(event) => setShowFab(event.currentTarget.scrollTop <= 8)}>
-          {filteredChats.map((chat) => <button key={chat.id} className={activeChat?.id === chat.id ? 'chat active' : 'chat'} onClick={() => openChat(chat)}><Avatar entity={chat} icon={chat.type === 'group' ? <Users /> : chat.type === 'rss' ? <Archive /> : null} /><span className="chat-copy"><b>{chat.title || `${chat.type} chat`}</b><small>{chat.type === 'direct' ? formatPresence(chat.peer) : chat.type === 'rss' ? 'RSS channel' : 'Group conversation'}</small></span><span className="chat-flags">{chat.pinned && <Pin />}{chat.muted && <VolumeX />}</span>{Number(chat.unreadCount || 0) > 0 && <span className="unread-badge">{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</span>}</button>)}
+        <div className="chat-list" ref={chatListRef} onTouchStart={chatListTouchStart} onTouchEnd={chatListTouchEnd} onScroll={(event) => setShowFab(event.currentTarget.scrollTop <= 8)}>
+          {refreshing && <div className="pull-refresh-label">Refreshing…</div>}
+          {filteredChats.map((chat) => {
+            const draft = draftVersion >= 0 && chat.type !== 'rss' ? localStorage.getItem(draftKey(chat.id)) : '';
+            return <button key={chat.id} className={activeChat?.id === chat.id ? 'chat active' : 'chat'} onClick={() => openChat(chat)}><Avatar entity={chat} icon={chat.type === 'group' ? <Users /> : chat.type === 'rss' ? <Archive /> : chat.type === 'saved' ? <Bookmark /> : null} /><span className="chat-copy"><b>{chat.title || `${chat.type} chat`}</b><small>{draft ? `Draft: ${draft.slice(0, 38)}` : chat.type === 'direct' ? formatPresence(chat.peer) : chat.type === 'rss' ? 'RSS channel' : chat.type === 'saved' ? 'Private saved messages' : 'Group conversation'}</small></span><span className="chat-flags">{chat.pinned && <Pin />}{chat.muted && <VolumeX />}</span>{Number(chat.unreadCount || 0) > 0 && <span className="unread-badge">{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</span>}</button>;
+          })}
         </div>
       </aside>
 
       <main className={activeChat ? 'conversation' : 'conversation mobile-hidden'}>
-        {activeChat ? <><header className="conversation-head"><button className="mobile-back" onClick={() => setActive(null)}><Menu /></button><Avatar entity={activeChat} icon={activeChat.type === 'group' ? <Users /> : activeChat.type === 'rss' ? <Archive /> : null} className="head-avatar" /><div className="conversation-title"><b>{activeChat.title}</b>{activeChat.type === 'direct' && <small>{formatPresence(activeChat.peer)}</small>}</div><div className="head-actions"><button onClick={exportHtml}><Archive /></button><div className="conversation-actions"><button onClick={() => setShowActions((value) => !value)}><MoreVertical /></button>{showActions && <div className="conversation-menu"><button onClick={() => openChat(activeChat)}><RefreshCw />Refresh</button><button className={activeChat.pinned ? 'chat-preference-button active' : ''} onClick={() => updatePreference('pinned')}>{activeChat.pinned ? <PinOff /> : <Pin />}{activeChat.pinned ? 'Unpin' : 'Pin'}</button><button className={activeChat.muted ? 'chat-preference-button active' : ''} onClick={() => updatePreference('muted')}>{activeChat.muted ? <Volume2 /> : <VolumeX />}{activeChat.muted ? 'Unmute' : 'Mute'}</button><button onClick={() => updatePreference('archived')}>{activeChat.archived ? <ArchiveRestore /> : <Archive />}{activeChat.archived ? 'Unarchive' : 'Archive'}</button>{activeChat.type !== 'rss' && <button onClick={() => { setShowActions(false); setShowGallery(true); }}><Images />Media gallery</button>}{activeChat.type === 'rss' && <button onClick={() => setShowShare(true)}><Share2 />Share RSS</button>}<button className="danger" onClick={() => api(`/api/chats/${activeChat.id}`, { method: 'DELETE' }).then(() => { setChats((current) => current.filter((chat) => chat.id !== activeChat.id)); setActive(null); })}><Trash2 />Hide conversation</button></div>}</div></div></header><ConnectionNotice status={status} />{feedError && <div className="conversation-error"><span>{feedError}</span><button onClick={() => setFeedError('')}><X /></button></div>}{activeChat.type === 'rss' ? <section className="messages rss-messages">{messages.map((message, index) => <article className="rss-card" key={message.id || index}>{message.imageUrl && <a href={message.link} target="_blank" rel="noreferrer" className="rss-image"><img src={message.imageUrl} alt={message.title} /></a>}<div className="rss-content"><div className="rss-meta"><span><CalendarDays />{formatDate(message.createdAt)}</span>{message.author && <span>{message.author}</span>}</div><h3>{message.title}</h3><p>{message.body}</p>{message.link && <a className="rss-link" href={message.link} target="_blank" rel="noreferrer">Read article <ExternalLink /></a>}</div></article>)}</section> : <VirtualMessageList messages={messages} user={user} hasMore={hasMore} loadingOlder={loadingOlder} onLoadOlder={loadOlder} onReply={setReplyTo} onEdit={editMessage} onDelete={deleteMessage} onReact={reactMessage} onOpenMedia={() => setShowGallery(true)} />}{activeChat.type !== 'rss' && <footer className="composer"><ReplyComposer message={replyTo} onCancel={() => setReplyTo(null)} /><input ref={file} type="file" hidden onChange={(event) => { const selected = event.target.files?.[0]; if (selected) uploadFile(selected, selected.name); event.target.value = ''; }} /><button onClick={() => file.current?.click()}><FileUp /></button><button onClick={() => setEmojiOpen((value) => !value)}><Smile /></button>{emojiOpen && <div className="emoji"><EmojiPicker onEmojiClick={(value) => { setText((current) => current + value.emoji); setEmojiOpen(false); }} /></div>}<textarea value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder={status === 'offline' ? 'Message will be queued' : 'Write a message'} /><button onClick={voice}><Mic /></button><button className="send" onClick={send}><Send /></button></footer>}</> : <div className="empty"><img src="/icon.svg" alt="Verdant" /><h2>Your conversations, naturally connected.</h2><p>Select a chat or create a new one.</p></div>}
+        {activeChat ? <>
+          <header className="conversation-head"><button className="mobile-back" onClick={() => setActive(null)}><Menu /></button><button className="chat-identity" onClick={() => setShowChatInfo(true)}><Avatar entity={activeChat} icon={activeChat.type === 'group' ? <Users /> : activeChat.type === 'rss' ? <Archive /> : activeChat.type === 'saved' ? <Bookmark /> : null} className="head-avatar" /><span className="conversation-title"><b>{activeChat.title}</b>{activeChat.type === 'direct' && <small>{formatPresence(activeChat.peer)}</small>}</span></button><div className="head-actions"><button onClick={exportHtml}><Archive /></button>{activeChat.type !== 'rss' && <button onClick={() => setShowSearch(true)}><Search /></button>}<div className="conversation-actions"><button onClick={() => setShowActions((value) => !value)}><MoreVertical /></button>{showActions && <div className="conversation-menu"><button onClick={() => openChat(activeChat)}><RefreshCw />Refresh</button><button className={activeChat.pinned ? 'chat-preference-button active' : ''} onClick={() => updatePreference('pinned')}>{activeChat.pinned ? <PinOff /> : <Pin />}{activeChat.pinned ? 'Unpin' : 'Pin'}</button><button className={activeChat.muted ? 'chat-preference-button active' : ''} onClick={() => updatePreference('muted')}>{activeChat.muted ? <Volume2 /> : <VolumeX />}{activeChat.muted ? 'Unmute' : 'Mute'}</button><button onClick={() => updatePreference('archived')}>{activeChat.archived ? <ArchiveRestore /> : <Archive />}{activeChat.archived ? 'Unarchive' : 'Archive'}</button>{activeChat.type !== 'rss' && <button onClick={() => { setShowActions(false); setShowGallery(true); }}><Images />Files</button>}{activeChat.type === 'rss' && <button onClick={() => setShowShare(true)}><Share2 />Share RSS</button>}<button className="danger" onClick={() => api(`/api/chats/${activeChat.id}`, { method: 'DELETE' }).then(() => { setChats((current) => current.filter((chat) => chat.id !== activeChat.id)); setActive(null); })}><Trash2 />Hide conversation</button></div>}</div></div></header>
+          <ConnectionNotice status={status} />
+          {chatInfo?.pinnedMessage && activeChat.type !== 'rss' && <div className="pinned-banner"><Pin /><button onClick={() => document.querySelector(`[data-message-id="${chatInfo.pinnedMessage.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><b>Pinned message</b><span>{chatInfo.pinnedMessage.body || chatInfo.pinnedMessage.fileName || 'Attachment'}</span></button><button onClick={unpinMessage}><X /></button></div>}
+          {selectionMode && <SelectionToolbar count={selectedMessages.size} onCancel={() => setSelectedMessages(new Set())} onSave={() => saveMessagesToSaved()} onForward={() => setShowForward(true)} onPin={pinSelected} onDelete={deleteSelected} />}
+          {uploadProgress && <div className="upload-progress"><span>{uploadProgress.name}</span><b>{uploadProgress.percent}%</b><i style={{ width: `${uploadProgress.percent}%` }} /></div>}
+          {feedError && <div className="conversation-error"><span>{feedError}</span><button onClick={() => setFeedError('')}><X /></button></div>}
+          {activeChat.type === 'rss' ? <section className="messages rss-messages">{messages.map((message, index) => <article className="rss-card" key={message.id || index}>{message.imageUrl && <a href={message.link} target="_blank" rel="noreferrer" className="rss-image"><img src={message.imageUrl} alt={message.title} /></a>}<div className="rss-content"><div className="rss-meta"><span><CalendarDays />{formatDate(message.createdAt)}</span>{message.author && <span>{message.author}</span>}</div><h3>{message.title}</h3><p>{message.body}</p>{message.link && <a className="rss-link" href={message.link} target="_blank" rel="noreferrer">Read article <ExternalLink /></a>}</div></article>)}</section> : <VirtualMessageList messages={messages} user={user} hasMore={hasMore} loadingOlder={loadingOlder} onLoadOlder={loadOlder} onPullRefresh={refreshAll} onReply={setReplyTo} onEdit={editMessage} onDelete={deleteMessage} onReact={reactMessage} onOpenMedia={() => setShowGallery(true)} selectedMessages={selectedMessages} selectionMode={selectionMode} onToggleSelect={toggleSelected} onPin={pinMessage} onSave={(message) => saveMessagesToSaved([message.id])} onForward={(message) => { setSelectedMessages(new Set([Number(message.id)])); setShowForward(true); }} />}
+          {activeChat.type !== 'rss' && <footer className="composer"><ReplyComposer message={replyTo} onCancel={() => setReplyTo(null)} /><input ref={file} type="file" hidden onChange={(event) => { const selected = event.target.files?.[0]; if (selected) uploadFile(selected, selected.name); event.target.value = ''; }} /><button onClick={() => file.current?.click()}><FileUp /></button><button onClick={() => setEmojiOpen((value) => !value)}><Smile /></button>{emojiOpen && <div className="emoji"><EmojiPicker onEmojiClick={(value) => { setText((current) => current + value.emoji); setEmojiOpen(false); }} /></div>}<textarea value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder={status === 'offline' ? 'Message will be queued' : 'Write a message'} /><button onClick={voice}><Mic /></button><button className="send" onClick={send}><Send /></button></footer>}
+        </> : <div className="empty"><img src="/icon.svg" alt="Verdant" /><h2>Your conversations, naturally connected.</h2><p>Select a chat or create a new one.</p></div>}
       </main>
 
       {!activeChat && <MobileNav unreadCount={unreadTotal} showFab={showFab} onChats={() => { setShowArchived(false); chatListRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }} onProfile={() => setShowAccountMenu(true)} onNewChat={() => setShowNew(true)} />}
       {showAccountMenu && <AccountMenu user={user} onClose={() => setShowAccountMenu(false)} onProfile={openProfile} onAdmin={openAdmin} onLogout={() => { setToken(null); location.reload(); }} />}
       {showNew && <NewChat onClose={() => setShowNew(false)} onCreated={(chat) => { setShowNew(false); setChats((current) => [chat, ...current]); openChat(chat); }} />}
       {showShare && <RssShareModal chat={activeChat} onClose={() => setShowShare(false)} />}
-      {showGallery && <MediaGallery chat={activeChat} onClose={() => setShowGallery(false)} />}
+      {showGallery && <MediaGallery chat={activeChat} messages={messages} onClose={() => setShowGallery(false)} />}
+      {showSearch && activeChat && <ChatSearchModal chat={activeChat} onClose={() => setShowSearch(false)} />}
+      {showForward && activeChat && <ForwardModal chats={chats} activeChat={activeChat} selectedIds={[...selectedMessages]} onClose={() => setShowForward(false)} onForward={forwardSelectedTo} />}
+      {showChatInfo && activeChat && <ChatInfoModal chat={activeChat} info={chatInfo} onClose={() => setShowChatInfo(false)} onCreateInvite={createInvite} onChangeRole={changeRole} onUnpin={unpinMessage} />}
     </div>
   );
 }
