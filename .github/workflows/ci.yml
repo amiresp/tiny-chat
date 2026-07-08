@@ -42,6 +42,7 @@ jobs:
           node --check apps/server/src/feature-chats.js
           node --check apps/server/src/feature-interactions.js
           node --check apps/server/src/feature-message-pages.js
+          node --check apps/server/src/feature-media.js
           node --check apps/server/src/feature-rss-proxy.js
           node --check apps/server/src/feature-pack.js
           node --check apps/server/src/feature-online.js
