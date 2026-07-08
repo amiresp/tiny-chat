@@ -3,10 +3,11 @@ const BACK_THRESHOLD = 92;
 const TAB_THRESHOLD = 72;
 const MAX_VERTICAL_DRIFT = 58;
 const MIN_HORIZONTAL_RATIO = 1.25;
+const EXIT_MS = 220;
 
 let edgeSwipe = null;
 let tabSwipe = null;
-let ghost = null;
+let completingBack = false;
 
 function isMobileWidth() {
   return window.matchMedia('(max-width: 760px)').matches;
@@ -26,6 +27,7 @@ function isInteractiveTarget(target) {
     '.conversation-menu',
     '.modal',
     '.account-menu-overlay',
+    '.profile-page-overlay',
     '.media-gallery-overlay',
     '.lightbox',
     'button',
@@ -45,58 +47,30 @@ function setConversationSwipe(value, edge) {
 }
 
 function resetConversationSwipe() {
-  const conversation = document.querySelector('.conversation.edge-swiping, .conversation.edge-completing');
+  const conversation = document.querySelector('.conversation.edge-swiping, .conversation.edge-completing, .conversation.edge-source-hidden');
   if (!conversation) return;
-  conversation.classList.remove('edge-swiping', 'edge-completing');
+  conversation.classList.remove('edge-swiping', 'edge-completing', 'edge-source-hidden');
   conversation.style.removeProperty('--edge-swipe');
   delete conversation.dataset.edge;
 }
 
-function removeGhost() {
-  ghost?.remove();
-  ghost = null;
-}
-
-function makeGhost(conversation, edge, startDistance) {
-  removeGhost();
-  const rect = conversation.getBoundingClientRect();
-  ghost = conversation.cloneNode(true);
-  ghost.classList.remove('edge-swiping', 'edge-completing');
-  ghost.classList.add('swipe-back-ghost');
-  ghost.dataset.edge = edge;
-  ghost.style.position = 'fixed';
-  ghost.style.left = `${rect.left}px`;
-  ghost.style.top = `${rect.top}px`;
-  ghost.style.width = `${rect.width}px`;
-  ghost.style.height = `${rect.height}px`;
-  ghost.style.margin = '0';
-  ghost.style.zIndex = '999';
-  ghost.style.pointerEvents = 'none';
-  ghost.style.setProperty('--ghost-start', `${edge === 'left' ? startDistance : -startDistance}px`);
-  document.body.appendChild(ghost);
-  return ghost;
-}
-
 function completeConversationSwipe(edge, startDistance = 0) {
   const conversation = conversationElement();
-  if (!conversation) {
-    document.querySelector('.mobile-back')?.click();
-    return;
-  }
+  if (!conversation || completingBack) return;
 
-  const localGhost = makeGhost(conversation, edge, startDistance);
-  conversation.classList.add('edge-source-hidden');
+  completingBack = true;
+  conversation.classList.remove('edge-swiping');
+  conversation.classList.add('edge-completing');
+  conversation.dataset.edge = edge;
+  conversation.style.setProperty('--edge-swipe', `${Math.max(startDistance, BACK_THRESHOLD)}px`);
   navigator.vibrate?.(8);
-  document.querySelector('.mobile-back')?.click();
-
-  requestAnimationFrame(() => {
-    localGhost?.classList.add('leaving');
-  });
 
   window.setTimeout(() => {
-    removeGhost();
-    resetConversationSwipe();
-  }, 260);
+    const button = document.querySelector('.mobile-back');
+    button?.click();
+    completingBack = false;
+    window.setTimeout(resetConversationSwipe, 40);
+  }, EXIT_MS);
 }
 
 function activeTabIndex() {
@@ -138,7 +112,7 @@ window.addEventListener('touchstart', (event) => {
   edgeSwipe = null;
   tabSwipe = null;
 
-  if (!isMobileWidth() || event.touches.length !== 1) return;
+  if (!isMobileWidth() || event.touches.length !== 1 || completingBack) return;
 
   const touch = event.touches[0];
   const width = window.innerWidth;
@@ -169,7 +143,7 @@ window.addEventListener('touchstart', (event) => {
 }, { passive: true });
 
 window.addEventListener('touchmove', (event) => {
-  if (!isMobileWidth() || event.touches.length !== 1) return;
+  if (!isMobileWidth() || event.touches.length !== 1 || completingBack) return;
 
   const touch = event.touches[0];
 
@@ -243,7 +217,7 @@ window.addEventListener('touchend', () => {
 window.addEventListener('touchcancel', () => {
   edgeSwipe = null;
   tabSwipe = null;
+  completingBack = false;
   resetConversationSwipe();
   resetTabSwipe();
-  removeGhost();
 }, { passive: true });
