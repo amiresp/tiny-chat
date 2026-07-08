@@ -1,13 +1,23 @@
-const GAP = 8;
+const GAP = 10;
 const MOBILE_QUERY = '(max-width: 760px)';
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function triggerButton() {
+  return document.querySelector('.conversation-actions > button');
+}
+
+function closeOpenMenu() {
+  const menu = document.querySelector('.conversation-menu');
+  if (!menu) return;
+  triggerButton()?.click();
+}
+
 function positionMenu(menu) {
   if (!menu || menu.dataset.positioned === 'working') return;
-  const trigger = document.querySelector('.conversation-actions > button');
+  const trigger = triggerButton();
   if (!trigger) return;
 
   menu.dataset.positioned = 'working';
@@ -23,18 +33,9 @@ function positionMenu(menu) {
   menu.style.overflowY = 'auto';
   menu.style.overscrollBehavior = 'contain';
 
-  if (mobile) {
-    menu.style.left = `${GAP}px`;
-    menu.style.right = `${GAP}px`;
-    menu.style.top = `${Math.min(triggerRect.bottom + GAP, viewportHeight - 90)}px`;
-    menu.style.width = 'auto';
-    menu.style.transformOrigin = 'top right';
-    menu.dataset.positioned = 'done';
-    return;
-  }
-
   const measured = menu.getBoundingClientRect();
-  const width = Math.min(Math.max(measured.width || 240, 220), viewportWidth - GAP * 2);
+  const desiredWidth = mobile ? 252 : 218;
+  const width = Math.min(desiredWidth, viewportWidth - GAP * 2);
   const height = measured.height || 320;
   const left = clamp(triggerRect.right - width, GAP, viewportWidth - width - GAP);
   const top = clamp(triggerRect.bottom + GAP, GAP, Math.max(GAP, viewportHeight - Math.min(height, viewportHeight - GAP * 2) - GAP));
@@ -53,6 +54,13 @@ function positionAllMenus() {
 
 const observer = new MutationObserver(positionAllMenus);
 observer.observe(document.body, { childList: true, subtree: true });
+
+document.addEventListener('pointerdown', (event) => {
+  const menu = document.querySelector('.conversation-menu');
+  if (!menu) return;
+  if (event.target.closest('.conversation-menu') || event.target.closest('.conversation-actions')) return;
+  closeOpenMenu();
+}, true);
 
 window.addEventListener('resize', positionAllMenus);
 window.addEventListener('orientationchange', () => window.setTimeout(positionAllMenus, 120));
