@@ -14,23 +14,23 @@
 .conversation.edge-swiping,.conversation.edge-completing{will-change:transform,opacity,border-radius;box-shadow:0 0 0 1px rgba(255,255,255,.55),-22px 0 60px rgba(10,40,31,.2)}
 .conversation.edge-swiping[data-edge="left"]{transform:translate3d(calc(var(--edge-swipe) * .88),0,0) scale(calc(1 - (var(--edge-swipe) / 5200)));border-radius:22px 0 0 22px}
 .conversation.edge-swiping[data-edge="right"]{transform:translate3d(calc(var(--edge-swipe) * -.88),0,0) scale(calc(1 - (var(--edge-swipe) / 5200)));border-radius:0 22px 22px 0}
+.conversation.edge-completing{transition:transform .22s var(--ease-soft),opacity .22s ease,border-radius .22s ease!important;opacity:.55}
+.conversation.edge-completing[data-edge="left"]{transform:translate3d(105vw,0,0) scale(.96);border-radius:22px 0 0 22px}
+.conversation.edge-completing[data-edge="right"]{transform:translate3d(-105vw,0,0) scale(.96);border-radius:0 22px 22px 0}
 .conversation.edge-swiping:before{content:"";position:absolute;inset:0;z-index:80;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,0));opacity:.8}
 .conversation.edge-swiping[data-edge="right"]:before{background:linear-gradient(270deg,rgba(255,255,255,.28),rgba(255,255,255,0))}
 .conversation.edge-source-hidden{opacity:0!important;pointer-events:none!important}
-.swipe-back-ghost{overflow:hidden!important;background:#f5faf7!important;box-shadow:0 24px 80px rgba(9,38,29,.28)!important;border-radius:22px!important;transform:translate3d(var(--ghost-start),0,0) scale(.985);opacity:1;will-change:transform,opacity;transition:transform .24s var(--ease-soft),opacity .24s ease!important}
-.swipe-back-ghost.leaving[data-edge="left"]{transform:translate3d(105vw,0,0) scale(.96);opacity:.25}
-.swipe-back-ghost.leaving[data-edge="right"]{transform:translate3d(-105vw,0,0) scale(.96);opacity:.25}
-.swipe-back-ghost *{pointer-events:none!important}
+.swipe-back-ghost{display:none!important}
 
 /* Chat header and menu must always sit above virtualized messages. */
 .conversation-head{position:relative;z-index:120;overflow:visible;box-shadow:0 1px 0 rgba(24,51,43,.05)}
 .head-actions,.conversation-actions{position:relative;z-index:130}
-.conversation-menu{position:fixed!important;z-index:600!important;padding:7px;border-radius:16px;box-shadow:0 22px 64px rgba(13,45,35,.28);transform-origin:top right;animation:verdant-menu-in .16s ease-out;overflow-y:auto;overscroll-behavior:contain;background:#fff}
+.conversation-menu{position:fixed!important;z-index:600!important;padding:6px;border-radius:15px;box-shadow:0 18px 54px rgba(13,45,35,.24);transform-origin:top right;animation:verdant-menu-in .16s ease-out;overflow-y:auto;overscroll-behavior:contain;background:#fff}
 .conversation-menu:before{display:none!important}
-.conversation-menu button{position:relative;z-index:1;min-height:42px;font-size:13px;font-weight:600;transition:background .15s ease,color .15s ease,transform .15s ease}
+.conversation-menu button{position:relative;z-index:1;min-height:39px;font-size:12.5px;font-weight:650;transition:background .15s ease,color .15s ease,transform .15s ease}
 .conversation-menu button:hover{transform:translateX(-1px)}
-.conversation-menu button+button{margin-top:2px}
-.conversation-menu .danger{margin-top:7px;border-top:1px solid #f1d7d3;border-radius:0 0 10px 10px;padding-top:12px}
+.conversation-menu button+button{margin-top:1px}
+.conversation-menu .danger{margin-top:6px;border-top:1px solid #f1d7d3;border-radius:0 0 10px 10px;padding-top:10px}
 
 /* Do not allow message controls to appear above or through the open chat menu. */
 .conversation:has(.conversation-menu) .message-actions{opacity:0!important;visibility:hidden!important;pointer-events:none!important;transform:translateY(6px)!important}
@@ -95,6 +95,8 @@
 .composer button:hover{background:#edf7f3;color:var(--green);transform:translateY(-1px)}
 .composer .send:hover{background:#0e6c55;color:#fff}
 .composer-reply{box-shadow:0 -8px 24px rgba(19,59,46,.08);animation:verdant-reply-in .2s var(--ease-out) both}
+.composer-reply>button{background:#fff!important;color:#b42318!important;border:1px solid #ffd8d3!important;box-shadow:0 5px 15px rgba(180,35,24,.12)!important}
+.composer-reply>button svg{width:18px;height:18px}
 
 /* Account bottom sheet motion. */
 .account-menu-overlay{animation:verdant-backdrop-in .22s ease-out both}
@@ -122,9 +124,9 @@
 
 @media(max-width:760px){
   .conversation-head{z-index:140}
-  .conversation-menu{position:fixed!important;top:auto;right:auto;left:auto;width:auto;max-height:calc(100dvh - 150px);border-radius:18px;padding:8px;box-shadow:0 24px 72px rgba(8,35,27,.34);transform-origin:top center}
+  .conversation-menu{position:fixed!important;top:auto;right:auto;left:auto;width:auto;max-height:calc(100dvh - 150px);border-radius:16px;padding:6px;box-shadow:0 18px 54px rgba(8,35,27,.28);transform-origin:top right}
   .conversation-menu:before{display:none}
-  .conversation-menu button{min-height:46px;padding:12px 13px;font-size:14px}
+  .conversation-menu button{min-height:42px;padding:10px 11px;font-size:13px}
 
   /* Keep attachments available, hide only the redundant emoji UI. */
   .composer>button:nth-of-type(1){display:grid!important}
@@ -135,6 +137,8 @@
   .composer textarea{padding:9px 6px;min-height:44px;font-size:16px}
   .composer button{width:42px;height:42px;border-radius:12px}
   .composer .send{border-radius:13px}
+  .composer-reply{padding:10px 12px!important;gap:9px!important;align-items:center!important}
+  .composer-reply>button{display:grid!important;place-items:center!important;width:38px!important;height:38px!important;min-width:38px!important;border-radius:13px!important;font-size:0!important}
 
   .message-actions{top:-12px;gap:2px}
   .message-actions>button{width:29px;height:29px}
