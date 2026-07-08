@@ -43,7 +43,10 @@ import {
   Bell,
   BellOff,
   Bookmark,
+  Check,
+  CheckCheck,
   ChevronLeft,
+  CircleAlert,
   Copy,
   Edit3,
   FileText,
@@ -51,6 +54,7 @@ import {
   Info,
   Lock,
   LogOut,
+  Mic,
   Moon,
   Paperclip,
   Pin,
@@ -62,6 +66,7 @@ import {
   Settings,
   Share2,
   Shield,
+  Square,
   Sun,
   Trash2,
   UserX,
@@ -82,48 +87,58 @@ setupIonicReact({ mode: 'ios' });
 function initials(entity) {
   return String(entity?.displayName || entity?.title || entity?.username || 'V').trim().slice(0, 2).toUpperCase();
 }
-
 function titleOf(entity) {
   return entity?.displayName || entity?.title || entity?.username || 'Verdant';
 }
-
 function formatTime(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
-
 function formatDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
 }
-
 function snippet(message) {
   return message?.body || message?.fileName || message?.title || 'Attachment';
 }
-
 function isAdmin(user) {
   return ['admin', 'administrator', 'superadmin', 'owner'].includes(String(user?.role || '').toLowerCase());
 }
-
 function initialThemeMode() {
   return localStorage.getItem('verdant-theme-mode') || 'system';
 }
-
 function resolvedTheme(mode) {
   if (mode === 'light' || mode === 'dark') return mode;
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
-
 function applyTheme(mode) {
   const theme = resolvedTheme(mode);
   document.documentElement.dataset.theme = theme;
   document.documentElement.dataset.themeMode = mode;
   localStorage.setItem('verdant-theme-mode', mode);
 }
-
 function Avatar({ entity, icon }) {
   const source = assetUrl(entity?.avatarUrl);
   return <IonAvatar className="vc-avatar">{source ? <img src={source} alt={titleOf(entity)} /> : <span>{icon || initials(entity)}</span>}</IonAvatar>;
+}
+function messageStatus(message) {
+  if (message.failedAt || message.status === 'failed') return { key: 'failed', label: 'failed', icon: CircleAlert };
+  if (message.readAt) return { key: 'seen', label: 'seen', icon: CheckCheck };
+  if (message.deliveredAt) return { key: 'delivered', label: 'delivered', icon: CheckCheck };
+  if (message.status === 'queued') return { key: 'queued', label: 'queued', icon: Check };
+  return { key: 'sent', label: 'sent', icon: Check };
+}
+function MessageStatus({ message, mine }) {
+  if (!mine) return null;
+  const status = messageStatus(message);
+  const Icon = status.icon;
+  return <span className={`message-status ${status.key}`} title={status.label}><Icon size={13} />{status.label}</span>;
+}
+function TypingIndicator({ users }) {
+  if (!users.length) return null;
+  const names = users.slice(0, 2).map((item) => item.displayName || item.username || 'Someone');
+  const text = users.length > 2 ? `${names.join(', ')} and ${users.length - 2} more are typing…` : `${names.join(' and ')} ${users.length === 1 ? 'is' : 'are'} typing…`;
+  return <div className="typing-indicator"><span /><span /><span /><b>{text}</b></div>;
 }
 
 function AuthPage({ onDone }) {
@@ -131,7 +146,6 @@ function AuthPage({ onDone }) {
   const [form, setForm] = useState({ username: '', mobile: '', identity: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
-
   async function submit(event) {
     event.preventDefault();
     try {
@@ -145,7 +159,6 @@ function AuthPage({ onDone }) {
       setBusy(false);
     }
   }
-
   return <IonPage><IonContent fullscreen className="auth-page"><form className="auth-card" onSubmit={submit}><img src="/icon.svg" alt="Verdant" /><h1>Verdant Chat</h1><p>Clean, calm, mobile-first messaging.</p>{mode === 'register' && <><IonInput label="Username" labelPlacement="stacked" value={form.username} onIonInput={(e) => setForm({ ...form, username: e.detail.value || '' })} /><IonInput label="Mobile" labelPlacement="stacked" value={form.mobile} onIonInput={(e) => setForm({ ...form, mobile: e.detail.value || '' })} /></>}{mode === 'login' && <IonInput label="Username or mobile" labelPlacement="stacked" value={form.identity} onIonInput={(e) => setForm({ ...form, identity: e.detail.value || '' })} />}<IonInput label="Password" labelPlacement="stacked" type="password" value={form.password} onIonInput={(e) => setForm({ ...form, password: e.detail.value || '' })} /><IonButton expand="block" type="submit" disabled={busy}>{mode === 'login' ? 'Sign in' : 'Create account'}</IonButton><IonButton fill="clear" type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Create account' : 'Back to sign in'}</IonButton></form></IonContent><IonLoading isOpen={busy} message="Please wait…" /><IonToast isOpen={Boolean(toast)} message={toast} duration={2600} onDidDismiss={() => setToast('')} /></IonPage>;
 }
 
@@ -154,14 +167,30 @@ function ChatList({ chats, activeId, query, setQuery, filter, setFilter, onOpen,
   return <IonPage className="chat-list-page"><IonHeader translucent><IonToolbar><IonTitle>Verdant</IonTitle><IonButtons slot="end"><IonButton onClick={onSettings}><Settings size={19} /></IonButton><IonButton onClick={onNew}><Plus size={20} /></IonButton></IonButtons></IonToolbar><IonToolbar className="search-toolbar"><IonSearchbar debounce={180} value={query} placeholder="Search chats" onIonInput={(e) => setQuery(e.detail.value || '')} /></IonToolbar><IonToolbar><IonSegment value={filter} onIonChange={(e) => setFilter(e.detail.value)}><IonSegmentButton value="active">Chats</IonSegmentButton><IonSegmentButton value="archived">Archived</IonSegmentButton></IonSegment></IonToolbar></IonHeader><IonContent><IonRefresher slot="fixed" onIonRefresh={async (e) => { await onRefresh(); e.detail.complete(); }}><IonRefresherContent /></IonRefresher><IonList lines="none" className="chat-list">{list.map((chat) => <IonItemSliding key={chat.id}><IonItem button detail={false} className={Number(activeId) === Number(chat.id) ? 'chat-row active' : 'chat-row'} onClick={() => onOpen(chat)}><Avatar entity={chat} icon={chat.type === 'saved' ? '★' : chat.type === 'group' ? 'G' : chat.type === 'rss' ? 'R' : undefined} /><IonLabel><h2>{chat.title || `${chat.type} chat`}</h2><p>{chat.type === 'direct' ? (chat.peer?.isOnline ? 'online' : 'direct message') : chat.type === 'saved' ? 'Private saved messages' : chat.type === 'rss' ? 'RSS channel' : 'Group conversation'}</p></IonLabel>{chat.pinned && <Pin size={15} className="mini-icon" />}{Number(chat.unreadCount || 0) > 0 && <IonBadge color="primary">{chat.unreadCount}</IonBadge>}</IonItem><IonItemOptions side="end"><IonItemOption color="medium">Archive</IonItemOption></IonItemOptions></IonItemSliding>)}</IonList></IonContent></IonPage>;
 }
 
-function MessageBubble({ message, me, onAction }) {
+function MessageBubble({ message, me, onAction, onSwipeReply }) {
   const mine = Number(message.senderId) === Number(me.id);
   const url = assetUrl(message.fileUrl);
   const isImage = message.mimeType?.startsWith('image/');
   const isVideo = message.mimeType?.startsWith('video/');
   const isAudio = message.mimeType?.startsWith('audio/') || message.type === 'voice';
-  const status = mine ? (message.failedAt ? 'failed' : message.deliveredAt ? 'delivered' : message.status || 'sent') : '';
-  return <div className={`message-line ${mine ? 'mine' : ''}`}><button className={`message-bubble ${mine ? 'mine' : ''}`} onContextMenu={(e) => { e.preventDefault(); onAction(message); }} onClick={() => onAction(message)}>{message.forwardedFromId && <small className="forwarded">Forwarded</small>}{message.replyTo && <span className="reply-chip"><Reply size={12} /> {message.replyTo.body}</span>}{message.deletedAt ? <em>Message deleted</em> : <>{message.body && <span className="message-text">{message.body}</span>}{isImage && url && <img className="message-media" src={url} alt={message.fileName || 'image'} />}{isVideo && url && <video className="message-media" src={url} controls preload="metadata" />}{isAudio && url && <audio src={url} controls preload="metadata" />}{url && !isImage && !isVideo && !isAudio && <span className="file-chip"><FileText size={16} />{message.fileName || 'File'}</span>}</>}<time>{formatTime(message.createdAt)}{message.editedAt ? ' · edited' : ''}{status && ` · ${status}`}</time></button></div>;
+  const touch = useRef(null);
+  function touchStart(event) {
+    const item = event.touches?.[0];
+    if (!item || message.deletedAt) return;
+    touch.current = { x: item.clientX, y: item.clientY };
+  }
+  function touchEnd(event) {
+    if (!touch.current) return;
+    const item = event.changedTouches?.[0];
+    const dx = item.clientX - touch.current.x;
+    const dy = Math.abs(item.clientY - touch.current.y);
+    touch.current = null;
+    if (dx > 62 && dy < 56 && !message.deletedAt) {
+      navigator.vibrate?.(6);
+      onSwipeReply(message);
+    }
+  }
+  return <div className={`message-line ${mine ? 'mine' : ''}`} onTouchStart={touchStart} onTouchEnd={touchEnd}><button className={`message-bubble ${mine ? 'mine' : ''}`} onContextMenu={(e) => { e.preventDefault(); onAction(message); }} onClick={() => onAction(message)}>{message.forwardedFromId && <small className="forwarded">Forwarded</small>}{message.replyTo && <span className="reply-chip"><Reply size={12} /> {message.replyTo.body}</span>}{message.deletedAt ? <em>Message deleted</em> : <>{message.body && <span className="message-text">{message.body}</span>}{isImage && url && <img className="message-media" src={url} alt={message.fileName || 'image'} />}{isVideo && url && <video className="message-media" src={url} controls preload="metadata" />}{isAudio && url && <audio src={url} controls preload="metadata" />}{url && !isImage && !isVideo && !isAudio && <span className="file-chip"><FileText size={16} />{message.fileName || 'File'}</span>}</>}<time>{formatTime(message.createdAt)}{message.editedAt ? ' · edited' : ''}<MessageStatus message={message} mine={mine} /></time></button></div>;
 }
 
 function PinnedBanner({ message, onJump, onUnpin }) {
@@ -169,15 +198,15 @@ function PinnedBanner({ message, onJump, onUnpin }) {
   return <div className="pinned-banner"><Pin size={17} /><button onClick={onJump}><b>Pinned message</b><small>{snippet(message)}</small></button><IonButton fill="clear" onClick={onUnpin} aria-label="Unpin"><X size={16} /></IonButton></div>;
 }
 
-function ChatRoom({ user, chat, messages, loading, text, setText, replyTo, onCancelReply, onSend, onBack, onRefresh, onFile, onInfo, onSearch, onOpenFiles, onSelectMessage, upload, pinnedMessage, onUnpinPinned }) {
+function ChatRoom({ user, chat, messages, loading, text, setText, replyTo, onCancelReply, onSend, onBack, onRefresh, onFile, onInfo, onSearch, onOpenFiles, onSelectMessage, onSwipeReply, upload, pinnedMessage, onUnpinPinned, typingUsers, recording, recordingSeconds, onStartVoice, onStopVoice, onCancelVoice }) {
   const contentRef = useRef(null);
   const fileRef = useRef(null);
   const touchStart = useRef(null);
-  useEffect(() => { requestAnimationFrame(() => contentRef.current?.scrollToBottom?.(250)); }, [messages.length, chat?.id]);
+  useEffect(() => { requestAnimationFrame(() => contentRef.current?.scrollToBottom?.(250)); }, [messages.length, chat?.id, typingUsers.length]);
   if (!chat) return <IonPage className="empty-chat"><IonContent className="ion-padding"><div className="empty-state"><img src="/icon.svg" alt="" /><h2>Select a chat</h2><p>Start from the list or create a new conversation.</p></div></IonContent></IonPage>;
-  function startSwipe(event) { const touch = event.touches?.[0]; if (!touch || touch.clientX > 32) return; touchStart.current = { x: touch.clientX, y: touch.clientY }; }
-  function endSwipe(event) { if (!touchStart.current) return; const touch = event.changedTouches?.[0]; const dx = touch.clientX - touchStart.current.x; const dy = Math.abs(touch.clientY - touchStart.current.y); touchStart.current = null; if (dx > 84 && dy < 70) onBack(); }
-  return <IonPage className="chat-room-page" onTouchStart={startSwipe} onTouchEnd={endSwipe}><IonHeader translucent><IonToolbar><IonButtons slot="start"><IonButton className="desktop-hidden back-arrow" fill="clear" onClick={onBack} aria-label="Back to chats"><ChevronLeft size={26} /></IonButton></IonButtons><button className="room-title" onClick={onInfo}><Avatar entity={chat} icon={chat.type === 'saved' ? '★' : chat.type === 'group' ? 'G' : undefined} /><span><b>{chat.title}</b><small>{chat.type}</small></span></button><IonButtons slot="end"><IonButton onClick={onSearch}><Search size={19} /></IonButton><IonButton onClick={onOpenFiles}><Image size={19} /></IonButton><IonButton onClick={onInfo}><Info size={19} /></IonButton></IonButtons></IonToolbar>{upload && <IonProgressBar value={upload.percent / 100} color="primary" />}<PinnedBanner message={pinnedMessage} onJump={() => document.querySelector(`[data-message-id="${pinnedMessage?.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} onUnpin={onUnpinPinned} /></IonHeader><IonContent ref={contentRef} className="messages-content"><IonRefresher slot="fixed" onIonRefresh={async (e) => { await onRefresh(); e.detail.complete(); }}><IonRefresherContent /></IonRefresher>{loading && <div className="center-note">Loading…</div>}<div className="message-stack">{messages.map((message) => <div key={message.id || message.clientId} data-message-id={message.id}><MessageBubble message={message} me={user} onAction={onSelectMessage} /></div>)}</div></IonContent>{chat.type !== 'rss' && <IonFooter className="composer-footer">{replyTo && <div className="reply-composer"><Reply size={16} /><span><b>Replying</b><small>{snippet(replyTo)}</small></span><IonButton fill="clear" onClick={onCancelReply}><X size={16} /></IonButton></div>}<input ref={fileRef} type="file" hidden onChange={(e) => { const selected = e.target.files?.[0]; if (selected) onFile(selected); e.target.value = ''; }} /><div className="composer-bar"><IonButton fill="clear" onClick={() => fileRef.current?.click()}><Paperclip size={20} /></IonButton><IonTextarea autoGrow rows={1} placeholder="Message" value={text} onIonInput={(e) => setText(e.detail.value || '')} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }} /><IonButton onClick={onSend} disabled={!text.trim()}><Send size={18} /></IonButton></div></IonFooter>}</IonPage>;
+  function startSwipe(event) { const item = event.touches?.[0]; if (!item || item.clientX > 32) return; touchStart.current = { x: item.clientX, y: item.clientY }; }
+  function endSwipe(event) { if (!touchStart.current) return; const item = event.changedTouches?.[0]; const dx = item.clientX - touchStart.current.x; const dy = Math.abs(item.clientY - touchStart.current.y); touchStart.current = null; if (dx > 84 && dy < 70) onBack(); }
+  return <IonPage className="chat-room-page" onTouchStart={startSwipe} onTouchEnd={endSwipe}><IonHeader translucent><IonToolbar><IonButtons slot="start"><IonButton className="desktop-hidden back-arrow" fill="clear" onClick={onBack} aria-label="Back to chats"><ChevronLeft size={26} /></IonButton></IonButtons><button className="room-title" onClick={onInfo}><Avatar entity={chat} icon={chat.type === 'saved' ? '★' : chat.type === 'group' ? 'G' : undefined} /><span><b>{chat.title}</b><small>{chat.type}</small></span></button><IonButtons slot="end"><IonButton onClick={onSearch}><Search size={19} /></IonButton><IonButton onClick={onOpenFiles}><Image size={19} /></IonButton><IonButton onClick={onInfo}><Info size={19} /></IonButton></IonButtons></IonToolbar>{upload && <IonProgressBar value={upload.percent / 100} color="primary" />}<PinnedBanner message={pinnedMessage} onJump={() => document.querySelector(`[data-message-id="${pinnedMessage?.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} onUnpin={onUnpinPinned} /></IonHeader><IonContent ref={contentRef} className="messages-content"><IonRefresher slot="fixed" onIonRefresh={async (e) => { await onRefresh(); e.detail.complete(); }}><IonRefresherContent /></IonRefresher>{loading && <div className="center-note">Loading…</div>}<div className="message-stack">{messages.map((message) => <div key={message.id || message.clientId} data-message-id={message.id}><MessageBubble message={message} me={user} onAction={onSelectMessage} onSwipeReply={onSwipeReply} /></div>)}<TypingIndicator users={typingUsers} /></div></IonContent>{chat.type !== 'rss' && <IonFooter className="composer-footer">{replyTo && <div className="reply-composer"><Reply size={16} /><span><b>Replying</b><small>{snippet(replyTo)}</small></span><IonButton fill="clear" onClick={onCancelReply}><X size={16} /></IonButton></div>}{recording && <div className="voice-recorder"><span className="record-dot" /><b>Recording voice</b><small>{recordingSeconds}s</small><IonButton fill="clear" color="danger" onClick={onCancelVoice}><X size={16} /></IonButton><IonButton fill="solid" onClick={onStopVoice}><Send size={16} />Send</IonButton></div>}<input ref={fileRef} type="file" hidden onChange={(e) => { const selected = e.target.files?.[0]; if (selected) onFile(selected); e.target.value = ''; }} /><div className="composer-bar"><IonButton fill="clear" disabled={recording} onClick={() => fileRef.current?.click()}><Paperclip size={20} /></IonButton><IonTextarea autoGrow rows={1} placeholder={recording ? 'Recording…' : 'Message'} value={text} disabled={recording} onIonInput={(e) => setText(e.detail.value || '')} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }} /><IonButton fill={recording ? 'solid' : 'clear'} color={recording ? 'danger' : 'primary'} onClick={recording ? onStopVoice : onStartVoice}>{recording ? <Square size={18} /> : <Mic size={20} />}</IonButton><IonButton onClick={onSend} disabled={!text.trim() || recording}><Send size={18} /></IonButton></div></IonFooter>}</IonPage>;
 }
 
 function NewChatModal({ open, onClose, onCreated }) {
@@ -260,20 +289,36 @@ function App() {
   const [messageAction, setMessageAction] = useState(null);
   const [chatInfo, setChatInfo] = useState(null);
   const [upload, setUpload] = useState(null);
+  const [typingByChat, setTypingByChat] = useState({});
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const socketRef = useRef(null);
   const activeRef = useRef(null);
+  const typingTimers = useRef(new Map());
+  const typingStopTimer = useRef(null);
+  const recorderRef = useRef(null);
+  const voiceChunks = useRef([]);
+  const voiceStream = useRef(null);
+  const recordingInterval = useRef(null);
+
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { applyTheme(themeMode); if (themeMode !== 'system') return undefined; const media = window.matchMedia?.('(prefers-color-scheme: dark)'); const listener = () => applyTheme('system'); media?.addEventListener?.('change', listener); return () => media?.removeEventListener?.('change', listener); }, [themeMode]);
   useEffect(() => { if (getToken()) api('/api/me').then((data) => setUser(data.user)).catch(() => setToken(null)); }, []);
   useEffect(() => { if (user) { loadChats(); connectSocket(); } return () => socketRef.current?.close(); }, [user?.id]);
   useEffect(() => { if (active?.id) loadChat(active); }, [active?.id]);
+  useEffect(() => () => { window.clearTimeout(typingStopTimer.current); for (const timer of typingTimers.current.values()) window.clearTimeout(timer); window.clearInterval(recordingInterval.current); }, []);
 
   async function loadChats() { const data = await api('/api/v2/chats'); setChats(data.chats || []); return data.chats || []; }
   async function loadChat(chat) { try { setLoading(true); setReplyTo(null); setText(localStorage.getItem(`v2-draft-${chat.id}`) || ''); if (chat.type === 'rss') { const data = await api(`/api/chats/${chat.id}/messages`); setMessages(data.items || []); } else { const data = await api(`/api/v2/chats/${chat.id}/messages/page?limit=60`); setMessages(data.messages || []); } api(`/api/v2/chats/${chat.id}/info`).then(setChatInfo).catch(() => setChatInfo(null)); } catch (error) { setToast(error.message); } finally { setLoading(false); } }
-  function connectSocket() { socketRef.current?.close(); const socket = io(socketOrigin, { auth: { token: getToken() }, reconnection: true }); socketRef.current = socket; socket.on('message:new', (message) => { if (Number(message.chatId) === Number(activeRef.current?.id)) setMessages((current) => [...current.filter((item) => item.id !== message.id), message]); loadChats().catch(() => {}); }); socket.on('message:updated', (message) => setMessages((current) => current.map((item) => item.id === message.id ? message : item))); socket.on('message:deleted', ({ id, deletedAt }) => setMessages((current) => current.map((item) => item.id === id ? { ...item, deletedAt, body: null, type: 'deleted' } : item))); socket.on('chat:pinned-message', ({ chatId, message }) => { if (Number(chatId) === Number(activeRef.current?.id)) setChatInfo((current) => ({ ...(current || {}), pinnedMessage: message })); }); socket.on('chat:new', () => loadChats().catch(() => {})); }
-  async function send() { if (!active || !text.trim()) return; const body = text.trim(); const currentReply = replyTo; setText(''); setReplyTo(null); localStorage.removeItem(`v2-draft-${active.id}`); try { const data = await api(`/api/v2/chats/${active.id}/messages`, { method: 'POST', body: JSON.stringify({ body, replyToId: currentReply?.id || null, clientId: crypto.randomUUID() }) }); setMessages((current) => [...current, data.message]); await loadChats(); } catch (error) { setToast(error.message); setText(body); setReplyTo(currentReply); } }
-  function updateDraft(value) { setText(value); if (active) { if (value.trim()) localStorage.setItem(`v2-draft-${active.id}`, value); else localStorage.removeItem(`v2-draft-${active.id}`); } }
+  function connectSocket() { socketRef.current?.close(); const socket = io(socketOrigin, { auth: { token: getToken() }, reconnection: true }); socketRef.current = socket; socket.on('message:new', (message) => { if (Number(message.chatId) === Number(activeRef.current?.id)) setMessages((current) => [...current.filter((item) => item.id !== message.id), message]); loadChats().catch(() => {}); }); socket.on('message:updated', (message) => setMessages((current) => current.map((item) => item.id === message.id ? message : item))); socket.on('message:status', (message) => setMessages((current) => current.map((item) => item.id === message.id ? { ...item, ...message } : item))); socket.on('message:deleted', ({ id, deletedAt }) => setMessages((current) => current.map((item) => item.id === id ? { ...item, deletedAt, body: null, type: 'deleted' } : item))); socket.on('typing:update', handleTypingUpdate); socket.on('chat:pinned-message', ({ chatId, message }) => { if (Number(chatId) === Number(activeRef.current?.id)) setChatInfo((current) => ({ ...(current || {}), pinnedMessage: message })); }); socket.on('chat:new', () => loadChats().catch(() => {})); }
+  function handleTypingUpdate(event) { if (!event || Number(event.userId) === Number(user?.id)) return; const chatId = Number(event.chatId); const userId = Number(event.userId); setTypingByChat((current) => { const chatMap = { ...(current[chatId] || {}) }; if (event.typing) chatMap[userId] = event; else delete chatMap[userId]; return { ...current, [chatId]: chatMap }; }); const key = `${chatId}:${userId}`; window.clearTimeout(typingTimers.current.get(key)); if (event.typing) typingTimers.current.set(key, window.setTimeout(() => { setTypingByChat((current) => { const chatMap = { ...(current[chatId] || {}) }; delete chatMap[userId]; return { ...current, [chatId]: chatMap }; }); }, 4500)); }
+  async function sendTyping(isTyping) { if (!activeRef.current || activeRef.current.type === 'rss') return; try { await api(`/api/v2/chats/${activeRef.current.id}/typing`, { method: 'POST', body: JSON.stringify({ typing: isTyping }) }); } catch {} }
+  async function send() { if (!active || !text.trim()) return; await sendTyping(false); const body = text.trim(); const currentReply = replyTo; setText(''); setReplyTo(null); localStorage.removeItem(`v2-draft-${active.id}`); try { const data = await api(`/api/v2/chats/${active.id}/messages`, { method: 'POST', body: JSON.stringify({ body, replyToId: currentReply?.id || null, clientId: crypto.randomUUID() }) }); setMessages((current) => [...current, data.message]); await loadChats(); } catch (error) { setToast(error.message); setText(body); setReplyTo(currentReply); } }
+  function updateDraft(value) { setText(value); if (active) { if (value.trim()) localStorage.setItem(`v2-draft-${active.id}`, value); else localStorage.removeItem(`v2-draft-${active.id}`); if (value.trim()) { sendTyping(true); window.clearTimeout(typingStopTimer.current); typingStopTimer.current = window.setTimeout(() => sendTyping(false), 1800); } else sendTyping(false); } }
   async function uploadFile(file) { if (!active) return; const formData = new FormData(); formData.append('file', file, file.name); formData.append('clientId', crypto.randomUUID()); formData.append('type', file.type.startsWith('audio/') ? 'voice' : 'file'); setUpload({ name: file.name, percent: 2 }); try { await new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('POST', `${apiOrigin}/api/chats/${active.id}/files`); xhr.setRequestHeader('Authorization', `Bearer ${getToken()}`); xhr.upload.onprogress = (event) => event.lengthComputable && setUpload({ name: file.name, percent: Math.round((event.loaded / event.total) * 100) }); xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('Upload failed')); xhr.onerror = () => reject(new Error('Upload failed')); xhr.send(formData); }); await loadChat(active); } catch (error) { setToast(error.message); } finally { setTimeout(() => setUpload(null), 800); } }
+  async function startVoiceRecording() { if (!active || recording) return; try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const recorder = new MediaRecorder(stream); voiceStream.current = stream; recorderRef.current = recorder; voiceChunks.current = []; recorder.ondataavailable = (event) => { if (event.data?.size) voiceChunks.current.push(event.data); }; recorder.start(); setRecording(true); setRecordingSeconds(0); recordingInterval.current = window.setInterval(() => setRecordingSeconds((value) => value + 1), 1000); } catch (error) { setToast(error.message || 'Microphone is not available'); } }
+  async function stopVoiceRecording() { const recorder = recorderRef.current; if (!recorder) return; await new Promise((resolve) => { recorder.onstop = resolve; recorder.stop(); }); window.clearInterval(recordingInterval.current); setRecording(false); const blob = new Blob(voiceChunks.current, { type: 'audio/webm' }); voiceStream.current?.getTracks().forEach((track) => track.stop()); recorderRef.current = null; voiceStream.current = null; voiceChunks.current = []; if (blob.size) await uploadFile(new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })); }
+  function cancelVoiceRecording() { const recorder = recorderRef.current; if (recorder && recorder.state !== 'inactive') recorder.stop(); window.clearInterval(recordingInterval.current); voiceStream.current?.getTracks().forEach((track) => track.stop()); recorderRef.current = null; voiceStream.current = null; voiceChunks.current = []; setRecording(false); setRecordingSeconds(0); }
   async function updatePreference(key) { if (!active) return; try { const data = await api(`/api/v2/chats/${active.id}/preferences`, { method: 'PATCH', body: JSON.stringify({ [key]: !active[key] }) }); const nextActive = { ...active, ...data.preferences }; setActive(nextActive); setChats((list) => list.map((chat) => chat.id === nextActive.id ? { ...chat, ...data.preferences } : chat)); if (key === 'archived' && data.preferences.archived) setActive(null); } catch (error) { setToast(error.message); } }
   async function blockPeer(userId) { try { await api(`/api/v2/users/${userId}/block`, { method: 'POST' }); setToast('User blocked'); setInfoOpen(false); } catch (error) { setToast(error.message); } }
   async function unpinPinnedMessage() { if (!active) return; try { await api(`/api/v2/chats/${active.id}/pinned-message`, { method: 'DELETE' }); setChatInfo((current) => ({ ...(current || {}), pinnedMessage: null })); } catch (error) { setToast(error.message); } }
@@ -281,9 +326,10 @@ function App() {
   async function messageCommand(role) { const message = messageAction; setMessageAction(null); if (!message) return; try { if (role === 'reply') { setReplyTo(message); return; } if (role === 'copy') await navigator.clipboard?.writeText(message.body || message.fileName || ''); if (role === 'edit') { const body = window.prompt('Edit message', message.body || ''); if (body && body.trim() && body.trim() !== message.body) { const data = await api(`/api/v2/messages/${message.id}`, { method: 'PATCH', body: JSON.stringify({ body: body.trim() }) }); setMessages((current) => current.map((item) => item.id === data.message.id ? data.message : item)); } return; } if (role === 'forward') { setForwardMessage(message); setForwardOpen(true); return; } if (role === 'delete') await api(`/api/v2/messages/${message.id}`, { method: 'DELETE' }); if (role === 'save') { const saved = chats.find((chat) => chat.type === 'saved'); if (saved) await api(`/api/v2/messages/${message.id}/forward`, { method: 'POST', body: JSON.stringify({ chatId: saved.id }) }); } if (role === 'pin') { const data = await api(`/api/v2/messages/${message.id}/pin`, { method: 'POST' }); setChatInfo((current) => ({ ...(current || {}), pinnedMessage: data.message || message })); } await loadChat(active); await loadChats(); } catch (error) { setToast(error.message); } }
   async function createInvite() { try { const data = await api(`/api/v2/chats/${active.id}/invites`, { method: 'POST' }); await navigator.clipboard?.writeText(`${location.origin}${data.invite.url}`); setToast('Invite link copied'); } catch (error) { setToast(error.message); } }
   function actionButtons() { const mineText = messageAction?.body && Number(messageAction?.senderId) === Number(user?.id) && !messageAction?.deletedAt; return [{ text: 'Reply', handler: () => messageCommand('reply') }, ...(mineText ? [{ text: 'Edit', handler: () => messageCommand('edit') }] : []), { text: 'Copy', handler: () => messageCommand('copy') }, { text: 'Forward', handler: () => messageCommand('forward') }, { text: 'Save to Saved Messages', handler: () => messageCommand('save') }, { text: 'Pin', handler: () => messageCommand('pin') }, { text: 'Delete', role: 'destructive', handler: () => messageCommand('delete') }, { text: 'Cancel', role: 'cancel' }]; }
+  const activeTypingUsers = Object.values(typingByChat[Number(active?.id)] || {});
 
   if (!user) return <IonApp><AuthPage onDone={setUser} /></IonApp>;
-  return <IonApp><div className={`desktop-shell ${active ? 'has-active-chat' : 'no-active-chat'}`}><ChatList chats={chats} activeId={active?.id} query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} onOpen={setActive} onNew={() => setNewChatOpen(true)} onRefresh={loadChats} onSettings={() => setSettingsOpen(true)} /><div id="main" className="main-pane"><ChatRoom user={user} chat={active} messages={messages} loading={loading} text={text} setText={updateDraft} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} onBack={() => setActive(null)} onRefresh={() => active && loadChat(active)} onFile={uploadFile} onInfo={() => setInfoOpen(true)} onSearch={() => setSearchOpen(true)} onOpenFiles={() => setFilesOpen(true)} onSelectMessage={setMessageAction} upload={upload} pinnedMessage={chatInfo?.pinnedMessage} onUnpinPinned={unpinPinnedMessage} /></div></div>{!active && <IonFab vertical="bottom" horizontal="end" slot="fixed"><IonFabButton onClick={() => setNewChatOpen(true)}><Plus size={22} /></IonFabButton></IonFab>}<NewChatModal open={newChatOpen} onClose={() => setNewChatOpen(false)} onCreated={(chat) => { setNewChatOpen(false); loadChats().then(() => setActive(chat)); }} /><SearchModal open={searchOpen} chat={active} onClose={() => setSearchOpen(false)} /><FilesModal open={filesOpen} chat={active} messages={messages} onClose={() => setFilesOpen(false)} /><ForwardModal open={forwardOpen} chats={chats} activeId={active?.id} onClose={() => { setForwardOpen(false); setForwardMessage(null); }} onForward={forwardToChat} /><ChatInfoModal open={infoOpen} chat={active} info={chatInfo} user={user} onClose={() => setInfoOpen(false)} onCreateInvite={createInvite} onPreference={updatePreference} onBlockPeer={blockPeer} /><SettingsModal open={settingsOpen} user={user} onClose={() => setSettingsOpen(false)} onLogout={() => { setToken(null); location.reload(); }} onUserUpdate={setUser} themeMode={themeMode} onThemeModeChange={setThemeMode} /><IonActionSheet isOpen={Boolean(messageAction)} header="Message" onDidDismiss={() => setMessageAction(null)} buttons={actionButtons()} /><IonToast isOpen={Boolean(toast)} message={toast} duration={2600} onDidDismiss={() => setToast('')} /></IonApp>;
+  return <IonApp><div className={`desktop-shell ${active ? 'has-active-chat' : 'no-active-chat'}`}><ChatList chats={chats} activeId={active?.id} query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} onOpen={setActive} onNew={() => setNewChatOpen(true)} onRefresh={loadChats} onSettings={() => setSettingsOpen(true)} /><div id="main" className="main-pane"><ChatRoom user={user} chat={active} messages={messages} loading={loading} text={text} setText={updateDraft} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} onBack={() => setActive(null)} onRefresh={() => active && loadChat(active)} onFile={uploadFile} onInfo={() => setInfoOpen(true)} onSearch={() => setSearchOpen(true)} onOpenFiles={() => setFilesOpen(true)} onSelectMessage={setMessageAction} onSwipeReply={setReplyTo} upload={upload} pinnedMessage={chatInfo?.pinnedMessage} onUnpinPinned={unpinPinnedMessage} typingUsers={activeTypingUsers} recording={recording} recordingSeconds={recordingSeconds} onStartVoice={startVoiceRecording} onStopVoice={stopVoiceRecording} onCancelVoice={cancelVoiceRecording} /></div></div>{!active && <IonFab vertical="bottom" horizontal="end" slot="fixed"><IonFabButton onClick={() => setNewChatOpen(true)}><Plus size={22} /></IonFabButton></IonFab>}<NewChatModal open={newChatOpen} onClose={() => setNewChatOpen(false)} onCreated={(chat) => { setNewChatOpen(false); loadChats().then(() => setActive(chat)); }} /><SearchModal open={searchOpen} chat={active} onClose={() => setSearchOpen(false)} /><FilesModal open={filesOpen} chat={active} messages={messages} onClose={() => setFilesOpen(false)} /><ForwardModal open={forwardOpen} chats={chats} activeId={active?.id} onClose={() => { setForwardOpen(false); setForwardMessage(null); }} onForward={forwardToChat} /><ChatInfoModal open={infoOpen} chat={active} info={chatInfo} user={user} onClose={() => setInfoOpen(false)} onCreateInvite={createInvite} onPreference={updatePreference} onBlockPeer={blockPeer} /><SettingsModal open={settingsOpen} user={user} onClose={() => setSettingsOpen(false)} onLogout={() => { setToken(null); location.reload(); }} onUserUpdate={setUser} themeMode={themeMode} onThemeModeChange={setThemeMode} /><IonActionSheet isOpen={Boolean(messageAction)} header="Message" onDidDismiss={() => setMessageAction(null)} buttons={actionButtons()} /><IonToast isOpen={Boolean(toast)} message={toast} duration={2600} onDidDismiss={() => setToast('')} /></IonApp>;
 }
 
 applyTheme(initialThemeMode());
