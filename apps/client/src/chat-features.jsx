@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -69,11 +69,15 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onReact, onOp
   const video = message.mimeType?.startsWith('video/');
   const audio = message.mimeType?.startsWith('audio/') || message.type === 'voice';
   const swipe = useRef(null);
+  const replyTimer = useRef(null);
   const [swipeX, setSwipeX] = useState(0);
+  const [replyFired, setReplyFired] = useState(false);
   const canSwipeReply = !message.deletedAt;
 
+  useEffect(() => () => window.clearTimeout(replyTimer.current), []);
+
   function touchStart(event) {
-    if (!canSwipeReply || event.touches.length !== 1) return;
+    if (!canSwipeReply || event.touches.length !== 1 || replyFired) return;
     const touch = event.touches[0];
     swipe.current = {
       startX: touch.clientX,
@@ -110,13 +114,25 @@ function MessageBubble({ message, user, onReply, onEdit, onDelete, onReact, onOp
     if (!swipe.current) return;
     const shouldReply = swipe.current.active && swipeX >= REPLY_SWIPE_THRESHOLD;
     swipe.current = null;
-    setSwipeX(0);
-    if (shouldReply) onReply(message);
+
+    if (!shouldReply) {
+      setSwipeX(0);
+      return;
+    }
+
+    navigator.vibrate?.(6);
+    setReplyFired(true);
+    setSwipeX(REPLY_SWIPE_LIMIT);
+    replyTimer.current = window.setTimeout(() => {
+      setSwipeX(0);
+      setReplyFired(false);
+      onReply(message);
+    }, 140);
   }
 
   return (
     <article
-      className={`message-row ${mine ? 'mine' : ''} ${swipeX ? 'swiping-reply' : ''}`}
+      className={`message-row ${mine ? 'mine' : ''} ${swipeX ? 'swiping-reply' : ''} ${replyFired ? 'reply-fired' : ''}`}
       style={{ '--reply-swipe': `${swipeX}px` }}
       onTouchStart={touchStart}
       onTouchMove={touchMove}
