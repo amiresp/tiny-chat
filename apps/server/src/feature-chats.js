@@ -28,9 +28,10 @@ function peerPayload(peer) {
 
 function personalizeDirectChat(chat, peer) {
   if (!chat || chat.type !== 'direct' || !peer) return chat;
+  const peerName = peer.displayName || peer.username || `User #${peer.id}`;
   return {
     ...chat,
-    title: peer.displayName || peer.username,
+    title: peerName,
     avatarUrl: peer.avatarUrl || null,
     peer: peerPayload(peer),
   };
@@ -92,14 +93,23 @@ async function enrichChats(list, currentUserId) {
   }
 
   const now = Date.now();
-  return list.map((chat) => ({
-    ...personalizeDirectChat(chat, peerByChatId.get(Number(chat.id))),
-    title: chat.type === 'saved' ? 'Saved Messages' : (chat.title || `${chat.type} chat`),
-    unreadCount: Number(chat.unreadCount || 0),
-    pinned: chat.type === 'saved' ? true : Boolean(chat.pinnedAt),
-    archived: Boolean(chat.archivedAt),
-    muted: Boolean(chat.mutedUntil && new Date(chat.mutedUntil).getTime() > now),
-  }));
+  return list.map((rawChat) => {
+    const chat = personalizeDirectChat(rawChat, peerByChatId.get(Number(rawChat.id)));
+    const title = chat.type === 'saved'
+      ? 'Saved Messages'
+      : chat.type === 'direct'
+        ? (chat.title || chat.peer?.displayName || chat.peer?.username || 'Direct chat')
+        : (chat.title || `${chat.type} chat`);
+
+    return {
+      ...chat,
+      title,
+      unreadCount: Number(chat.unreadCount || 0),
+      pinned: chat.type === 'saved' ? true : Boolean(chat.pinnedAt),
+      archived: Boolean(chat.archivedAt),
+      muted: Boolean(chat.mutedUntil && new Date(chat.mutedUntil).getTime() > now),
+    };
+  });
 }
 
 function notifyUser(io, userId, chat) {
