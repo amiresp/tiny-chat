@@ -77,6 +77,14 @@ function themeButton({ label, active, action }) {
   return button;
 }
 
+async function requestNotifications() {
+  if (!('Notification' in window)) {
+    alert('Notifications are not supported on this device.');
+    return;
+  }
+  await window.Notification.requestPermission();
+}
+
 async function renderProfilePage() {
   applyTheme();
   const user = await loadUser();
@@ -155,7 +163,7 @@ async function renderProfilePage() {
   const appGroup = document.createElement('div');
   appGroup.className = 'profile-page-group';
   appGroup.append(
-    row({ icon: '🔔', title: 'Notifications', subtitle: 'Enable notifications from browser prompt', action: async () => Notification?.requestPermission?.() }),
+    row({ icon: '🔔', title: 'Notifications', subtitle: 'Enable notifications from browser prompt', action: requestNotifications }),
     row({ icon: '♻️', title: 'Update application', subtitle: 'Clear PWA cache and reload', action: async () => {
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
