@@ -1,5 +1,4 @@
-const EDGE_SIZE = 30;
-const BACK_THRESHOLD = 92;
+const BACK_THRESHOLD = 86;
 const TAB_THRESHOLD = 72;
 const MAX_VERTICAL_DRIFT = 58;
 const MIN_HORIZONTAL_RATIO = 1.25;
@@ -23,11 +22,12 @@ function conversationElement() {
 function isInteractiveTarget(target) {
   return Boolean(target.closest([
     '.bubble',
+    '.message-row',
     '.composer',
     '.conversation-menu',
     '.modal',
     '.account-menu-overlay',
-    '.profile-page-overlay',
+    '.profile-screen',
     '.media-gallery-overlay',
     '.lightbox',
     'button',
@@ -38,11 +38,11 @@ function isInteractiveTarget(target) {
   ].join(',')));
 }
 
-function setConversationSwipe(value, edge) {
+function setConversationSwipe(value) {
   const conversation = conversationElement();
   if (!conversation) return;
   conversation.classList.add('edge-swiping');
-  conversation.dataset.edge = edge;
+  conversation.dataset.edge = 'left';
   conversation.style.setProperty('--edge-swipe', `${value}px`);
 }
 
@@ -54,14 +54,14 @@ function resetConversationSwipe() {
   delete conversation.dataset.edge;
 }
 
-function completeConversationSwipe(edge, startDistance = 0) {
+function completeConversationSwipe(startDistance = 0) {
   const conversation = conversationElement();
   if (!conversation || completingBack) return;
 
   completingBack = true;
   conversation.classList.remove('edge-swiping');
   conversation.classList.add('edge-completing');
-  conversation.dataset.edge = edge;
+  conversation.dataset.edge = 'left';
   conversation.style.setProperty('--edge-swipe', `${Math.max(startDistance, BACK_THRESHOLD)}px`);
   navigator.vibrate?.(8);
 
@@ -115,21 +115,14 @@ window.addEventListener('touchstart', (event) => {
   if (!isMobileWidth() || event.touches.length !== 1 || completingBack) return;
 
   const touch = event.touches[0];
-  const width = window.innerWidth;
 
   if (conversationElement() && !isInteractiveTarget(event.target)) {
-    const fromLeft = touch.clientX <= EDGE_SIZE;
-    const fromRight = touch.clientX >= width - EDGE_SIZE;
-
-    if (fromLeft || fromRight) {
-      edgeSwipe = {
-        x: touch.clientX,
-        y: touch.clientY,
-        edge: fromLeft ? 'left' : 'right',
-        active: false,
-      };
-      return;
-    }
+    edgeSwipe = {
+      x: touch.clientX,
+      y: touch.clientY,
+      active: false,
+    };
+    return;
   }
 
   const chatList = event.target.closest?.('.chat-list');
@@ -150,7 +143,6 @@ window.addEventListener('touchmove', (event) => {
   if (edgeSwipe) {
     const deltaX = touch.clientX - edgeSwipe.x;
     const deltaY = touch.clientY - edgeSwipe.y;
-    const effective = edgeSwipe.edge === 'left' ? deltaX : -deltaX;
 
     if (!edgeSwipe.active) {
       if (Math.abs(deltaY) > MAX_VERTICAL_DRIFT || Math.abs(deltaY) > Math.abs(deltaX)) {
@@ -158,15 +150,15 @@ window.addEventListener('touchmove', (event) => {
         resetConversationSwipe();
         return;
       }
-      if (effective > 12 && effective > Math.abs(deltaY) * MIN_HORIZONTAL_RATIO) {
+      if (deltaX > 12 && deltaX > Math.abs(deltaY) * MIN_HORIZONTAL_RATIO) {
         edgeSwipe.active = true;
       }
     }
 
     if (!edgeSwipe?.active) return;
     event.preventDefault();
-    const distance = Math.max(0, Math.min(window.innerWidth, effective));
-    setConversationSwipe(distance, edgeSwipe.edge);
+    const distance = Math.max(0, Math.min(window.innerWidth, deltaX));
+    setConversationSwipe(distance);
     return;
   }
 
@@ -195,11 +187,10 @@ window.addEventListener('touchend', () => {
   if (edgeSwipe) {
     const conversation = document.querySelector('.conversation.edge-swiping');
     const value = Math.abs(Number.parseFloat(conversation?.style.getPropertyValue('--edge-swipe') || '0'));
-    const edge = edgeSwipe.edge;
     const shouldBack = edgeSwipe.active && value >= BACK_THRESHOLD;
     edgeSwipe = null;
 
-    if (shouldBack) completeConversationSwipe(edge, value);
+    if (shouldBack) completeConversationSwipe(value);
     else resetConversationSwipe();
   }
 
