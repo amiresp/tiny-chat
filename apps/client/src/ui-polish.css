@@ -16,6 +16,12 @@
 .message-actions{z-index:20}
 .reaction-picker,.message-action-menu{z-index:45}
 
+/* RSS error retry. */
+.conversation-error{display:flex;align-items:center;gap:10px}
+.conversation-error>span{flex:1;min-width:0}
+.rss-retry-button{height:30px;padding:0 12px;border-radius:10px;background:#b42318;color:#fff;font-weight:800;font-size:12px;white-space:nowrap;box-shadow:0 6px 18px rgba(180,35,24,.18);transition:transform .15s ease,background .15s ease}
+.rss-retry-button:hover{background:#8f1d15;transform:translateY(-1px)}
+
 /* Swipe to reply. */
 .message-row{position:relative;touch-action:pan-y;--reply-swipe:0px}
 .message-row .bubble{will-change:transform;transform:translate3d(var(--reply-swipe),0,0);transition:transform .18s cubic-bezier(.2,.8,.2,1)}
@@ -78,6 +84,10 @@
   .reaction-picker{max-width:calc(100vw - 26px);overflow-x:auto;scrollbar-width:none}
   .reaction-picker::-webkit-scrollbar{display:none}
   .conversation:has(.conversation-menu) .virtual-messages:after{background:rgba(232,241,237,.5);backdrop-filter:blur(2px)}
+
+  .conversation-error{align-items:stretch;flex-wrap:wrap}
+  .conversation-error>span{flex-basis:100%}
+  .rss-retry-button{height:34px;padding:0 14px}
 
   .message-row{padding-left:4px;padding-right:4px}
   .swipe-reply-cue{left:6px;background:#fff;border:1px solid #cbe3da;box-shadow:0 8px 22px rgba(14,48,38,.14)}
