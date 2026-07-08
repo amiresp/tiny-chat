@@ -6,6 +6,7 @@ const MIN_HORIZONTAL_RATIO = 1.25;
 
 let edgeSwipe = null;
 let tabSwipe = null;
+let ghost = null;
 
 function isMobileWidth() {
   return window.matchMedia('(max-width: 760px)').matches;
@@ -51,24 +52,51 @@ function resetConversationSwipe() {
   delete conversation.dataset.edge;
 }
 
-function completeConversationSwipe(edge) {
+function removeGhost() {
+  ghost?.remove();
+  ghost = null;
+}
+
+function makeGhost(conversation, edge, startDistance) {
+  removeGhost();
+  const rect = conversation.getBoundingClientRect();
+  ghost = conversation.cloneNode(true);
+  ghost.classList.remove('edge-swiping', 'edge-completing');
+  ghost.classList.add('swipe-back-ghost');
+  ghost.dataset.edge = edge;
+  ghost.style.position = 'fixed';
+  ghost.style.left = `${rect.left}px`;
+  ghost.style.top = `${rect.top}px`;
+  ghost.style.width = `${rect.width}px`;
+  ghost.style.height = `${rect.height}px`;
+  ghost.style.margin = '0';
+  ghost.style.zIndex = '999';
+  ghost.style.pointerEvents = 'none';
+  ghost.style.setProperty('--ghost-start', `${edge === 'left' ? startDistance : -startDistance}px`);
+  document.body.appendChild(ghost);
+  return ghost;
+}
+
+function completeConversationSwipe(edge, startDistance = 0) {
   const conversation = conversationElement();
   if (!conversation) {
     document.querySelector('.mobile-back')?.click();
     return;
   }
 
-  const width = window.innerWidth;
-  conversation.classList.remove('edge-swiping');
-  conversation.classList.add('edge-completing');
-  conversation.dataset.edge = edge;
-  conversation.style.setProperty('--edge-swipe', `${width}px`);
+  const localGhost = makeGhost(conversation, edge, startDistance);
+  conversation.classList.add('edge-source-hidden');
   navigator.vibrate?.(8);
+  document.querySelector('.mobile-back')?.click();
+
+  requestAnimationFrame(() => {
+    localGhost?.classList.add('leaving');
+  });
 
   window.setTimeout(() => {
-    document.querySelector('.mobile-back')?.click();
-    window.setTimeout(resetConversationSwipe, 40);
-  }, 190);
+    removeGhost();
+    resetConversationSwipe();
+  }, 260);
 }
 
 function activeTabIndex() {
@@ -197,7 +225,7 @@ window.addEventListener('touchend', () => {
     const shouldBack = edgeSwipe.active && value >= BACK_THRESHOLD;
     edgeSwipe = null;
 
-    if (shouldBack) completeConversationSwipe(edge);
+    if (shouldBack) completeConversationSwipe(edge, value);
     else resetConversationSwipe();
   }
 
@@ -217,4 +245,5 @@ window.addEventListener('touchcancel', () => {
   tabSwipe = null;
   resetConversationSwipe();
   resetTabSwipe();
+  removeGhost();
 }, { passive: true });
