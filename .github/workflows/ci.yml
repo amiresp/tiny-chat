@@ -43,9 +43,15 @@ jobs:
           node --check apps/server/src/feature-interactions.js
           node --check apps/server/src/feature-message-pages.js
           node --check apps/server/src/feature-rss-proxy.js
+          node --check apps/server/src/feature-pack.js
           node --check apps/server/src/feature-online.js
           node --check apps/server/src/feature-avatar.js
           node --check apps/server/src/heartbeat-state.js
+
+      - name: Validate client helpers
+        run: |
+          node --check apps/client/src/feature-pack-ui.js
+          node --check apps/client/src/profile-page.js
 
       - name: Build web client
         run: npm run build -w @verdant/client
