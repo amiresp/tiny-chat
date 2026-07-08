@@ -4,9 +4,11 @@ import { createOnlineFeatureRouter } from './feature-online.js';
 import { createAvatarFeatureRouter } from './feature-avatar.js';
 import { createInteractionRouter } from './feature-interactions.js';
 import { createMessagePageRouter } from './feature-message-pages.js';
+import { createRssProxyRouter } from './feature-rss-proxy.js';
 
 export function createFeatureRouter({ io }) {
   const router = express.Router();
+  router.use(createRssProxyRouter());
   router.use(createMessagePageRouter());
   router.use(createInteractionRouter());
   router.use(createChatFeatureRouter({ io }));
