@@ -9,8 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "android:add": "cap add android",
-    "android:sync": "npm run build && cap sync android",
-    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug --no-daemon",
+    "android:sync": "npm run build && (test -d android || cap add android) && cap sync android",
+    "android:build": "npm run android:sync && cd android && chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon",
     "electron:build": "npm run build && electron-builder --win nsis portable"
   },
   "dependencies": {
