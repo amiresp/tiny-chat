@@ -6,6 +6,7 @@ const isElectron = /Electron/i.test(navigator.userAgent);
 const isWindows = /Windows/i.test(navigator.userAgent);
 const isDesktop = window.matchMedia?.('(min-width: 1024px)').matches;
 let deferredInstallPrompt = null;
+let startupTimer = null;
 
 root.classList.toggle('is-pwa', Boolean(isStandalone));
 root.classList.toggle('is-electron', Boolean(isElectron));
@@ -15,8 +16,12 @@ root.classList.toggle('is-browser', !isStandalone && !isElectron);
 root.dataset.surface = isElectron ? 'windows' : isStandalone ? 'pwa' : 'browser';
 
 function refreshDesktopClass() {
+  const wide = window.innerWidth >= 1360;
   root.classList.toggle('is-desktop', window.innerWidth >= 1024);
-  root.classList.toggle('is-wide-desktop', window.innerWidth >= 1360);
+  root.classList.toggle('is-wide-desktop', wide);
+  const rail = document.querySelector('.desktop-helper-rail');
+  if (rail && !wide) rail.remove();
+  if (wide) setTimeout(ensureDesktopRail, 80);
 }
 window.addEventListener('resize', refreshDesktopClass, { passive: true });
 refreshDesktopClass();
@@ -24,6 +29,7 @@ refreshDesktopClass();
 function clickFirst(selector) {
   const node = document.querySelector(selector);
   if (node instanceof HTMLElement) node.click();
+  return Boolean(node);
 }
 
 function focusSearch() {
@@ -31,16 +37,24 @@ function focusSearch() {
   if (activeSearch instanceof HTMLElement) {
     activeSearch.focus();
     activeSearch.select?.();
+    return true;
   }
+  return false;
 }
 
 function openNewChat() {
-  clickFirst('.chat-list-page ion-toolbar:first-child ion-buttons ion-button:last-child');
+  const buttons = [...document.querySelectorAll('.chat-list-page ion-header ion-toolbar:first-of-type ion-buttons ion-button')];
+  const plusButton = buttons[buttons.length - 1];
+  if (plusButton instanceof HTMLElement) {
+    plusButton.click();
+    return true;
+  }
+  return clickFirst('ion-fab-button');
 }
 
-function closeTopLayer() {
-  const layer = document.querySelector('ion-modal, ion-action-sheet, ion-alert, .attachment-preview-layer, .ux-error-fallback');
-  if (layer?.dismiss) {
+function dismissLayer(layer) {
+  if (!layer) return false;
+  if (typeof layer.dismiss === 'function') {
     layer.dismiss();
     return true;
   }
@@ -49,6 +63,14 @@ function closeTopLayer() {
     return true;
   }
   return false;
+}
+
+function closeTopLayer() {
+  return dismissLayer(document.querySelector('.attachment-preview-layer'))
+    || dismissLayer(document.querySelector('ion-action-sheet.show-action-sheet'))
+    || dismissLayer(document.querySelector('ion-alert.alert-presenting'))
+    || dismissLayer(document.querySelector('ion-modal.show-modal'))
+    || false;
 }
 
 function showShortcutHelp() {
@@ -75,7 +97,7 @@ function showShortcutHelp() {
 }
 
 window.addEventListener('keydown', (event) => {
-  const key = event.key.toLowerCase();
+  const key = String(event.key || '').toLowerCase();
   const mod = event.ctrlKey || event.metaKey;
   if (event.key === 'Escape') {
     if (closeTopLayer()) event.preventDefault();
@@ -101,10 +123,12 @@ function runStartupAction() {
   const action = params.get('action');
   if (!action) return;
   let tries = 0;
-  const timer = window.setInterval(() => {
+  clearInterval(startupTimer);
+  startupTimer = window.setInterval(() => {
     tries += 1;
-    if (action === 'new-chat') openNewChat();
-    if (action === 'new-chat' || tries > 12) window.clearInterval(timer);
+    if (action === 'new-chat' && openNewChat()) window.clearInterval(startupTimer);
+    if (action === 'search' && focusSearch()) window.clearInterval(startupTimer);
+    if (tries > 12) window.clearInterval(startupTimer);
   }, 450);
 }
 window.addEventListener('DOMContentLoaded', runStartupAction);
@@ -125,7 +149,6 @@ function ensureDesktopRail() {
   document.body.appendChild(rail);
 }
 setTimeout(ensureDesktopRail, 900);
-window.addEventListener('resize', () => setTimeout(ensureDesktopRail, 80), { passive: true });
 
 window.addEventListener('beforeinstallprompt', (event) => {
   event.preventDefault();
