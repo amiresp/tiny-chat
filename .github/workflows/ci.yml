@@ -59,6 +59,7 @@ jobs:
       - name: Validate Ionic client helpers
         run: |
           node --check apps/client-v2/src/ux-guards.js
+          node --check apps/client-v2/src/platform-ui.js
 
       - name: Build Ionic client v2
         run: npm run build -w @verdant/client-v2
