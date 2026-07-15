@@ -1,4 +1,5 @@
 import './ux-guards.css';
+import './performance-ui.css';
 import { apiOrigin } from './runtime';
 
 let activeChatId = null;
