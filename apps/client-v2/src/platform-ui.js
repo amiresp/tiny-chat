@@ -34,6 +34,10 @@ function focusSearch() {
   }
 }
 
+function openNewChat() {
+  clickFirst('.chat-list-page ion-toolbar:first-child ion-buttons ion-button:last-child');
+}
+
 function closeTopLayer() {
   const layer = document.querySelector('ion-modal, ion-action-sheet, ion-alert, .attachment-preview-layer, .ux-error-fallback');
   if (layer?.dismiss) {
@@ -84,13 +88,26 @@ window.addEventListener('keydown', (event) => {
   }
   if (key === 'n') {
     event.preventDefault();
-    clickFirst('.chat-list-page ion-button:last-child');
+    openNewChat();
   }
   if (key === '/' || key === '?') {
     event.preventDefault();
     showShortcutHelp();
   }
 });
+
+function runStartupAction() {
+  const params = new URLSearchParams(window.location.search);
+  const action = params.get('action');
+  if (!action) return;
+  let tries = 0;
+  const timer = window.setInterval(() => {
+    tries += 1;
+    if (action === 'new-chat') openNewChat();
+    if (action === 'new-chat' || tries > 12) window.clearInterval(timer);
+  }, 450);
+}
+window.addEventListener('DOMContentLoaded', runStartupAction);
 
 function ensureDesktopRail() {
   if (!root.classList.contains('is-wide-desktop')) return;
