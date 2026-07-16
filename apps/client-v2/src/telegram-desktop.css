@@ -1,0 +1,350 @@
+@media (min-width: 900px){
+  html.is-desktop[data-theme="light"],
+  html.is-electron[data-theme="light"],
+  html.is-windows[data-theme="light"]{
+    --vc-bg:#0b1220;
+    --vc-bg-2:#0f172a;
+    --vc-surface:#152033;
+    --vc-surface-2:#1e2b3f;
+    --vc-surface-3:#26364f;
+    --vc-line:#23344d;
+    --vc-muted:#8ea2bb;
+    --vc-text:#edf4ff;
+    --vc-message-in:#17263b;
+    --vc-message-out:#2f5f8f;
+    --vc-message-out-text:#ffffff;
+    --ion-background-color:#0b1220;
+    --ion-text-color:#edf4ff;
+    --ion-toolbar-background:#152033;
+    --ion-item-background:#152033;
+  }
+
+  html.is-desktop .desktop-shell,
+  html.is-electron .desktop-shell,
+  html.is-pwa.is-desktop .desktop-shell{
+    display:grid!important;
+    grid-template-columns:360px minmax(0,1fr)!important;
+    grid-template-rows:100%;
+    width:100vw;
+    height:100vh;
+    min-width:900px;
+    overflow:hidden;
+    background:#0b1220;
+  }
+
+  html.is-desktop .chat-list-page,
+  html.is-electron .chat-list-page,
+  html.is-pwa.is-desktop .chat-list-page{
+    grid-column:1;
+    grid-row:1;
+    width:360px!important;
+    min-width:360px!important;
+    max-width:360px!important;
+    height:100vh;
+    border-right:1px solid #21324a!important;
+    box-shadow:none!important;
+    background:#152033!important;
+    z-index:3;
+    overflow:hidden;
+    position:relative!important;
+  }
+
+  html.is-desktop .main-pane,
+  html.is-electron .main-pane,
+  html.is-pwa.is-desktop .main-pane{
+    grid-column:2;
+    grid-row:1;
+    width:100%!important;
+    min-width:0!important;
+    height:100vh;
+    display:flex!important;
+    overflow:hidden;
+    background:#0b1220!important;
+    padding-right:0!important;
+    position:relative!important;
+  }
+
+  html.is-desktop .chat-list-page ion-header,
+  html.is-electron .chat-list-page ion-header,
+  html.is-pwa.is-desktop .chat-list-page ion-header{
+    background:#152033!important;
+    box-shadow:none!important;
+    border-bottom:1px solid #21324a;
+  }
+
+  html.is-desktop .chat-list-page ion-toolbar,
+  html.is-electron .chat-list-page ion-toolbar,
+  html.is-pwa.is-desktop .chat-list-page ion-toolbar{
+    --background:#152033!important;
+    --color:#edf4ff!important;
+    --border-color:transparent!important;
+  }
+
+  html.is-desktop .chat-list-page ion-title,
+  html.is-electron .chat-list-page ion-title,
+  html.is-pwa.is-desktop .chat-list-page ion-title{
+    font-weight:900;
+    letter-spacing:.01em;
+    color:#edf4ff;
+  }
+
+  html.is-desktop .chat-list-page ion-button,
+  html.is-electron .chat-list-page ion-button,
+  html.is-pwa.is-desktop .chat-list-page ion-button{
+    --color:#7eb6ff!important;
+  }
+
+  html.is-desktop .chat-list-page ion-content::part(background),
+  html.is-electron .chat-list-page ion-content::part(background),
+  html.is-pwa.is-desktop .chat-list-page ion-content::part(background){
+    background:#152033!important;
+  }
+
+  html.is-desktop .search-toolbar ion-searchbar,
+  html.is-electron .search-toolbar ion-searchbar,
+  html.is-pwa.is-desktop .search-toolbar ion-searchbar{
+    --background:#24344b!important;
+    --color:#edf4ff!important;
+    --placeholder-color:#8ea2bb!important;
+    --icon-color:#8ea2bb!important;
+    --clear-button-color:#8ea2bb!important;
+    padding-inline:10px;
+    padding-top:8px;
+    padding-bottom:8px;
+  }
+
+  html.is-desktop .chat-list-page ion-segment,
+  html.is-electron .chat-list-page ion-segment,
+  html.is-pwa.is-desktop .chat-list-page ion-segment{
+    width:max-content;
+    margin:4px auto 7px;
+    padding:2px;
+    border-radius:10px;
+    background:#24344b;
+  }
+
+  html.is-desktop .chat-list-page ion-segment-button,
+  html.is-electron .chat-list-page ion-segment-button,
+  html.is-pwa.is-desktop .chat-list-page ion-segment-button{
+    --color:#9fb2c8;
+    --color-checked:#0b1220;
+    --indicator-color:#dbeafe;
+    min-height:30px;
+    font-size:12px;
+    text-transform:none;
+  }
+
+  html.is-desktop .chat-list,
+  html.is-electron .chat-list,
+  html.is-pwa.is-desktop .chat-list{
+    padding:8px 0 14px!important;
+    background:#152033;
+  }
+
+  html.is-desktop .chat-row,
+  html.is-electron .chat-row,
+  html.is-pwa.is-desktop .chat-row{
+    --background:transparent!important;
+    --color:#edf4ff!important;
+    --border-radius:0!important;
+    --padding-start:12px!important;
+    --inner-padding-end:12px!important;
+    min-height:64px;
+    margin:0!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+
+  html.is-desktop .chat-row:hover,
+  html.is-electron .chat-row:hover,
+  html.is-pwa.is-desktop .chat-row:hover{
+    --background:#1c2a3e!important;
+  }
+
+  html.is-desktop .chat-row.active,
+  html.is-electron .chat-row.active,
+  html.is-pwa.is-desktop .chat-row.active{
+    --background:#2f5f8f!important;
+    background:#2f5f8f!important;
+  }
+
+  html.is-desktop .chat-row h2,
+  html.is-electron .chat-row h2,
+  html.is-pwa.is-desktop .chat-row h2{
+    color:#f8fbff!important;
+    font-size:14px!important;
+    font-weight:850!important;
+    margin-bottom:4px!important;
+  }
+
+  html.is-desktop .chat-row p,
+  html.is-electron .chat-row p,
+  html.is-pwa.is-desktop .chat-row p{
+    color:#8ea2bb!important;
+    font-size:13px!important;
+  }
+
+  html.is-desktop .chat-row.active p,
+  html.is-electron .chat-row.active p,
+  html.is-pwa.is-desktop .chat-row.active p{
+    color:#dbeafe!important;
+  }
+
+  html.is-desktop .vc-avatar,
+  html.is-electron .vc-avatar,
+  html.is-pwa.is-desktop .vc-avatar{
+    width:48px!important;
+    height:48px!important;
+    box-shadow:none!important;
+    background:linear-gradient(135deg,#3b82f6,#1d4ed8)!important;
+  }
+
+  html.is-desktop .chat-room-page ion-header,
+  html.is-electron .chat-room-page ion-header,
+  html.is-pwa.is-desktop .chat-room-page ion-header{
+    background:#152033!important;
+    border-bottom:1px solid #21324a;
+    box-shadow:none!important;
+  }
+
+  html.is-desktop .chat-room-page ion-toolbar,
+  html.is-electron .chat-room-page ion-toolbar,
+  html.is-pwa.is-desktop .chat-room-page ion-toolbar{
+    --background:#152033!important;
+    --color:#edf4ff!important;
+    --border-color:transparent!important;
+    min-height:55px;
+  }
+
+  html.is-desktop .room-title,
+  html.is-electron .room-title,
+  html.is-pwa.is-desktop .room-title{
+    color:#edf4ff!important;
+  }
+
+  html.is-desktop .room-title small,
+  html.is-electron .room-title small,
+  html.is-pwa.is-desktop .room-title small{
+    color:#8ea2bb!important;
+  }
+
+  html.is-desktop .chat-room-page ion-button,
+  html.is-electron .chat-room-page ion-button,
+  html.is-pwa.is-desktop .chat-room-page ion-button{
+    --color:#7eb6ff!important;
+  }
+
+  html.is-desktop .messages-content::part(background),
+  html.is-electron .messages-content::part(background),
+  html.is-pwa.is-desktop .messages-content::part(background){
+    background:
+      radial-gradient(circle at 30% 10%,rgba(37,99,235,.08),transparent 28%),
+      linear-gradient(180deg,#0b1220 0%,#0d1625 100%)!important;
+  }
+
+  html.is-desktop .messages-content::part(scroll),
+  html.is-electron .messages-content::part(scroll),
+  html.is-pwa.is-desktop .messages-content::part(scroll){
+    padding:22px clamp(16px,5vw,86px) 24px!important;
+  }
+
+  html.is-desktop .message-stack,
+  html.is-electron .message-stack,
+  html.is-pwa.is-desktop .message-stack{
+    max-width:880px;
+    margin:0 auto;
+    width:100%;
+  }
+
+  html.is-desktop .message-bubble,
+  html.is-electron .message-bubble,
+  html.is-pwa.is-desktop .message-bubble{
+    max-width:min(72%,650px)!important;
+    border:0!important;
+    border-radius:14px!important;
+    background:#17263b!important;
+    color:#edf4ff!important;
+    box-shadow:0 10px 24px rgba(2,6,23,.22)!important;
+  }
+
+  html.is-desktop .message-bubble.mine,
+  html.is-electron .message-bubble.mine,
+  html.is-pwa.is-desktop .message-bubble.mine{
+    background:#2f5f8f!important;
+    color:#ffffff!important;
+    border-bottom-right-radius:5px!important;
+  }
+
+  html.is-desktop .message-line:not(.mine) .message-bubble,
+  html.is-electron .message-line:not(.mine) .message-bubble,
+  html.is-pwa.is-desktop .message-line:not(.mine) .message-bubble{
+    border-bottom-left-radius:5px!important;
+  }
+
+  html.is-desktop .message-bubble time,
+  html.is-electron .message-bubble time,
+  html.is-pwa.is-desktop .message-bubble time{
+    color:#a9bdd5!important;
+    opacity:1!important;
+  }
+
+  html.is-desktop .message-bubble.mine time,
+  html.is-electron .message-bubble.mine time,
+  html.is-pwa.is-desktop .message-bubble.mine time{
+    color:#bfdbfe!important;
+  }
+
+  html.is-desktop .composer-footer,
+  html.is-electron .composer-footer,
+  html.is-pwa.is-desktop .composer-footer{
+    background:#152033!important;
+    border-top:1px solid #21324a!important;
+  }
+
+  html.is-desktop .composer-bar,
+  html.is-electron .composer-bar,
+  html.is-pwa.is-desktop .composer-bar{
+    max-width:980px;
+    margin:0 auto;
+    padding:9px 16px!important;
+  }
+
+  html.is-desktop .composer-bar ion-textarea,
+  html.is-electron .composer-bar ion-textarea,
+  html.is-pwa.is-desktop .composer-bar ion-textarea{
+    --background:#0f1b2b!important;
+    --color:#edf4ff!important;
+    --placeholder-color:#8ea2bb!important;
+    border:1px solid #263a55;
+  }
+
+  html.is-desktop .pinned-banner,
+  html.is-electron .pinned-banner,
+  html.is-pwa.is-desktop .pinned-banner{
+    background:#1d2d44!important;
+    border-color:#2b4363!important;
+  }
+
+  html.is-desktop .desktop-helper-rail,
+  html.is-electron .desktop-helper-rail,
+  html.is-pwa.is-desktop .desktop-helper-rail{
+    display:none!important;
+  }
+}
+
+@media (min-width: 1180px){
+  html.is-desktop .desktop-shell,
+  html.is-electron .desktop-shell,
+  html.is-pwa.is-desktop .desktop-shell{
+    grid-template-columns:370px minmax(0,1fr)!important;
+  }
+
+  html.is-desktop .chat-list-page,
+  html.is-electron .chat-list-page,
+  html.is-pwa.is-desktop .chat-list-page{
+    width:370px!important;
+    min-width:370px!important;
+    max-width:370px!important;
+  }
+}
