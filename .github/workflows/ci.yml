@@ -65,6 +65,7 @@ jobs:
           node --check apps/client-v2/src/tiny-chat-premium.js
           node --check apps/client-v2/src/tiny-chat-pages.js
           node --check apps/client-v2/src/tiny-chat-delete.js
+          node --check apps/client-v2/src/tiny-chat-stability.js
           node --check apps/client-v2/src/tiny-chat-final-overrides.js
 
       - name: Build Ionic client v2
