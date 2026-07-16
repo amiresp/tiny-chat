@@ -8,11 +8,13 @@ import { createRssProxyRouter } from './feature-rss-proxy.js';
 import { createFeaturePackRouter } from './feature-pack.js';
 import { createMediaFeatureRouter } from './feature-media.js';
 import { createRetentionRouter } from './feature-retention.js';
+import { createContactsRouter } from './feature-contacts.js';
 
 export function createFeatureRouter({ io }) {
   const router = express.Router();
   router.use(createRetentionRouter());
   router.use(createRssProxyRouter());
+  router.use(createContactsRouter());
   router.use(createFeaturePackRouter());
   router.use(createMessagePageRouter());
   router.use(createMediaFeatureRouter());
