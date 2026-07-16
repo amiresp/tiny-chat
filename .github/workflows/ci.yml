@@ -60,7 +60,8 @@ jobs:
         run: |
           node --check apps/client-v2/src/ux-guards.js
           node --check apps/client-v2/src/platform-ui.js
-          node --check apps/client-v2/src/telegram-ui.js
+          node --check apps/client-v2/src/tiny-chat-premium.js
+          node --check apps/client-v2/src/tiny-chat-final-overrides.js
 
       - name: Build Ionic client v2
         run: npm run build -w @verdant/client-v2
