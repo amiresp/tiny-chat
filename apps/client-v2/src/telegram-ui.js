@@ -1,4 +1,5 @@
 import './telegram-desktop.css';
+import './telegram-desktop-polish.css';
 
 let latestChats = [];
 const originalFetch = window.fetch.bind(window);
