@@ -144,6 +144,51 @@ export function createChatFeatureRouter({ io = null } = {}) {
         AND unread_receipts.read_at IS NULL
     )`.as('unread_count');
 
+    const lastMessageBody = sql`(
+      SELECT last_message.body
+      FROM messages AS last_message
+      WHERE last_message.chat_id = ${chats.id}
+        AND last_message.deleted_at IS NULL
+      ORDER BY last_message.id DESC
+      LIMIT 1
+    )`.as('last_message_body');
+
+    const lastMessageFileName = sql`(
+      SELECT last_message.file_name
+      FROM messages AS last_message
+      WHERE last_message.chat_id = ${chats.id}
+        AND last_message.deleted_at IS NULL
+      ORDER BY last_message.id DESC
+      LIMIT 1
+    )`.as('last_message_file_name');
+
+    const lastMessageType = sql`(
+      SELECT last_message.type
+      FROM messages AS last_message
+      WHERE last_message.chat_id = ${chats.id}
+        AND last_message.deleted_at IS NULL
+      ORDER BY last_message.id DESC
+      LIMIT 1
+    )`.as('last_message_type');
+
+    const lastMessageAt = sql`(
+      SELECT last_message.created_at
+      FROM messages AS last_message
+      WHERE last_message.chat_id = ${chats.id}
+        AND last_message.deleted_at IS NULL
+      ORDER BY last_message.id DESC
+      LIMIT 1
+    )`.as('last_message_at');
+
+    const lastMessageSenderId = sql`(
+      SELECT last_message.sender_id
+      FROM messages AS last_message
+      WHERE last_message.chat_id = ${chats.id}
+        AND last_message.deleted_at IS NULL
+      ORDER BY last_message.id DESC
+      LIMIT 1
+    )`.as('last_message_sender_id');
+
     const list = await db.select({
       id: chats.id,
       type: chats.type,
@@ -156,6 +201,11 @@ export function createChatFeatureRouter({ io = null } = {}) {
       archivedAt: chatMembers.archivedAt,
       mutedUntil: chatMembers.mutedUntil,
       unreadCount,
+      lastMessageBody,
+      lastMessageFileName,
+      lastMessageType,
+      lastMessageAt,
+      lastMessageSenderId,
     }).from(chats)
       .innerJoin(chatMembers, eq(chatMembers.chatId, chats.id))
       .where(and(
@@ -237,28 +287,21 @@ export function createChatFeatureRouter({ io = null } = {}) {
       targetIds = (await db.select({ id: users.id }).from(users).where(eq(users.isBanned, false)))
         .map((item) => Number(item.id));
     } else {
-      targetIds = [...new Set(
-        (request.body.userIds || [])
-          .map(Number)
-          .filter((id) => Number.isInteger(id) && id > 0),
-      )];
+      targetIds = [...new Set((request.body.userIds || []).map(Number).filter(Number.isInteger))];
     }
-    if (!targetIds.length) return response.status(400).json({ error: 'Select at least one user' });
+    if (!targetIds.length) return response.status(400).json({ error: 'Choose at least one user' });
 
     const now = new Date();
-    for (const userId of targetIds) {
+    for (const targetId of targetIds) {
       await db.insert(chatMembers).values({
         chatId,
-        userId,
+        userId: targetId,
         joinedAt: now,
-      }).onConflictDoUpdate({
-        target: [chatMembers.chatId, chatMembers.userId],
-        set: { hiddenAt: null },
-      });
-      notifyUser(io, userId, chat);
+      }).onConflictDoNothing();
+      notifyUser(io, targetId, chat);
     }
 
-    return response.json({ ok: true, sharedCount: targetIds.length });
+    return response.json({ shared: targetIds.length });
   }));
 
   return router;
