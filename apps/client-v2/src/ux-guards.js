@@ -1,5 +1,6 @@
 import './ux-guards.css';
 import './performance-ui.css';
+import './telegram-desktop.css';
 import './platform-ui.js';
 import { apiOrigin } from './runtime';
 
