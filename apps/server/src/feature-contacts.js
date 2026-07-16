@@ -16,13 +16,15 @@ ON user_contacts(owner_id, created_at DESC);
 `);
 
 function mapUser(row) {
+  const lastSeenAt = Number(row.last_seen_at || 0) || null;
   return {
     id: row.id,
     username: row.username,
     mobile: row.mobile,
     displayName: row.display_name,
     avatarUrl: row.avatar_url,
-    isOnline: Boolean(row.is_online),
+    lastSeenAt,
+    isOnline: !row.hide_presence && Boolean(lastSeenAt && Date.now() - lastSeenAt < 120_000),
     added: Boolean(row.added),
     createdAt: row.contact_created_at || null,
   };
@@ -39,7 +41,8 @@ export function createContactsRouter() {
         u.mobile,
         u.display_name,
         u.avatar_url,
-        u.is_online,
+        u.last_seen_at,
+        u.hide_presence,
         1 AS added,
         uc.created_at AS contact_created_at
       FROM user_contacts uc
@@ -63,7 +66,8 @@ export function createContactsRouter() {
         u.mobile,
         u.display_name,
         u.avatar_url,
-        u.is_online,
+        u.last_seen_at,
+        u.hide_presence,
         CASE WHEN uc.contact_id IS NULL THEN 0 ELSE 1 END AS added,
         uc.created_at AS contact_created_at
       FROM users u
@@ -99,7 +103,7 @@ export function createContactsRouter() {
     }
 
     const target = sqlite.prepare(`
-      SELECT id, username, mobile, display_name, avatar_url, is_online
+      SELECT id, username, mobile, display_name, avatar_url, last_seen_at, hide_presence
       FROM users
       WHERE id = ?
     `).get(contactId);
