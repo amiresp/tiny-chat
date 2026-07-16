@@ -1,0 +1,6 @@
+.desktop-helper-rail,.telegram-main-rail{display:none!important}
+html[data-theme] .desktop-shell{padding-right:0!important}
+html[data-theme] .chat-list-page{left:auto!important;right:auto!important;transform:none!important}
+html[data-theme] .main-pane{margin:0!important;transform:none!important}
+html[data-theme] .chat-room-page ion-footer{padding-left:0!important;padding-right:0!important}
+@media(max-width:767px){body:has(.has-active-chat) .tiny-mobile-nav{transform:translateY(120%);opacity:0;pointer-events:none}}
