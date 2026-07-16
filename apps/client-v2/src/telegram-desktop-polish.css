@@ -1,0 +1,374 @@
+@media (min-width:900px){
+  html.is-desktop .desktop-shell,
+  html.is-electron .desktop-shell,
+  html.is-pwa.is-desktop .desktop-shell{
+    grid-template-columns:68px 304px minmax(0,1fr)!important;
+  }
+
+  html.is-desktop .chat-list-page,
+  html.is-electron .chat-list-page,
+  html.is-pwa.is-desktop .chat-list-page{
+    grid-column:2!important;
+    width:304px!important;
+    min-width:304px!important;
+    max-width:304px!important;
+  }
+
+  html.is-desktop .main-pane,
+  html.is-electron .main-pane,
+  html.is-pwa.is-desktop .main-pane{
+    grid-column:3!important;
+  }
+
+  .telegram-main-rail{
+    position:fixed;
+    inset:0 auto 0 0;
+    z-index:45;
+    width:68px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    padding:8px 0 10px;
+    background:var(--tg-header);
+    border-right:1px solid var(--tg-border);
+    color:var(--tg-text);
+  }
+
+  .telegram-main-rail button{
+    width:68px;
+    min-height:58px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    border:0;
+    background:transparent;
+    color:var(--tg-sidebar-muted);
+    cursor:pointer;
+    font:inherit;
+  }
+
+  .telegram-main-rail button:hover,
+  .telegram-main-rail button.active{
+    background:color-mix(in srgb,var(--tg-link) 14%,transparent);
+    color:var(--tg-link);
+  }
+
+  .telegram-main-rail button span{
+    font-size:20px;
+    line-height:1;
+  }
+
+  .telegram-main-rail button small{
+    font-size:10px;
+    line-height:1.1;
+  }
+
+  .telegram-main-rail .telegram-rail-menu{
+    min-height:48px;
+    margin-bottom:2px;
+  }
+
+  .telegram-rail-spacer{flex:1}
+
+  html.is-desktop .chat-list-page ion-header,
+  html.is-electron .chat-list-page ion-header,
+  html.is-pwa.is-desktop .chat-list-page ion-header{
+    border-bottom:0!important;
+  }
+
+  html.is-desktop .chat-list-page ion-toolbar:first-of-type,
+  html.is-electron .chat-list-page ion-toolbar:first-of-type,
+  html.is-pwa.is-desktop .chat-list-page ion-toolbar:first-of-type{
+    min-height:50px!important;
+  }
+
+  html.is-desktop .chat-list-page ion-title,
+  html.is-electron .chat-list-page ion-title,
+  html.is-pwa.is-desktop .chat-list-page ion-title{
+    font-size:16px!important;
+    padding-left:14px!important;
+  }
+
+  html.is-desktop .search-toolbar ion-searchbar,
+  html.is-electron .search-toolbar ion-searchbar,
+  html.is-pwa.is-desktop .search-toolbar ion-searchbar{
+    height:46px!important;
+    padding:5px 10px!important;
+  }
+
+  html.is-desktop .chat-list-page ion-segment,
+  html.is-electron .chat-list-page ion-segment,
+  html.is-pwa.is-desktop .chat-list-page ion-segment{
+    width:calc(100% - 20px)!important;
+    margin:2px 10px 6px!important;
+  }
+
+  html.is-desktop .chat-list,
+  html.is-electron .chat-list,
+  html.is-pwa.is-desktop .chat-list{
+    padding:0!important;
+  }
+
+  html.is-desktop .chat-row,
+  html.is-electron .chat-row,
+  html.is-pwa.is-desktop .chat-row{
+    min-height:72px!important;
+    --padding-start:10px!important;
+    --inner-padding-end:8px!important;
+  }
+
+  html.is-desktop .chat-row .vc-avatar,
+  html.is-electron .chat-row .vc-avatar,
+  html.is-pwa.is-desktop .chat-row .vc-avatar{
+    width:50px!important;
+    height:50px!important;
+    margin-right:9px!important;
+  }
+
+  html.is-desktop .chat-row ion-label,
+  html.is-electron .chat-row ion-label,
+  html.is-pwa.is-desktop .chat-row ion-label{
+    position:relative!important;
+    min-width:0!important;
+    padding:10px 48px 9px 0!important;
+    margin:0!important;
+  }
+
+  html.is-desktop .chat-row ion-label h2,
+  html.is-electron .chat-row ion-label h2,
+  html.is-pwa.is-desktop .chat-row ion-label h2{
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    font-size:14px!important;
+    line-height:18px!important;
+    margin:0 0 5px!important;
+  }
+
+  html.is-desktop .chat-row ion-label p,
+  html.is-electron .chat-row ion-label p,
+  html.is-pwa.is-desktop .chat-row ion-label p{
+    display:none!important;
+  }
+
+  html.is-desktop .chat-row ion-label::before,
+  html.is-electron .chat-row ion-label::before,
+  html.is-pwa.is-desktop .chat-row ion-label::before{
+    content:attr(data-time);
+    position:absolute;
+    top:10px;
+    right:0;
+    max-width:44px;
+    overflow:hidden;
+    color:var(--tg-sidebar-muted);
+    font-size:11px;
+    line-height:16px;
+    text-align:right;
+    white-space:nowrap;
+  }
+
+  html.is-desktop .chat-row ion-label::after,
+  html.is-electron .chat-row ion-label::after,
+  html.is-pwa.is-desktop .chat-row ion-label::after{
+    content:attr(data-preview);
+    display:block;
+    max-width:100%;
+    overflow:hidden;
+    color:var(--tg-sidebar-muted);
+    font-size:13px;
+    line-height:18px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  html.is-desktop .chat-row.active ion-label::before,
+  html.is-desktop .chat-row.active ion-label::after,
+  html.is-electron .chat-row.active ion-label::before,
+  html.is-electron .chat-row.active ion-label::after,
+  html.is-pwa.is-desktop .chat-row.active ion-label::before,
+  html.is-pwa.is-desktop .chat-row.active ion-label::after{
+    color:color-mix(in srgb,var(--tg-sidebar-active-text) 82%,transparent)!important;
+  }
+
+  html.is-desktop .chat-row ion-badge,
+  html.is-electron .chat-row ion-badge,
+  html.is-pwa.is-desktop .chat-row ion-badge{
+    position:absolute!important;
+    right:9px!important;
+    bottom:9px!important;
+    min-width:20px!important;
+    height:20px!important;
+    display:grid!important;
+    place-items:center!important;
+    border-radius:999px!important;
+    font-size:11px!important;
+    box-shadow:none!important;
+  }
+
+  html.is-desktop .chat-row .mini-icon,
+  html.is-electron .chat-row .mini-icon,
+  html.is-pwa.is-desktop .chat-row .mini-icon{
+    position:absolute!important;
+    right:11px!important;
+    bottom:11px!important;
+    width:14px!important;
+    height:14px!important;
+  }
+
+  html.is-desktop .chat-row.has-unread .mini-icon,
+  html.is-electron .chat-row.has-unread .mini-icon,
+  html.is-pwa.is-desktop .chat-row.has-unread .mini-icon{
+    display:none!important;
+  }
+
+  html.is-desktop .chat-room-page ion-toolbar,
+  html.is-electron .chat-room-page ion-toolbar,
+  html.is-pwa.is-desktop .chat-room-page ion-toolbar{
+    min-height:54px!important;
+    padding-inline:6px!important;
+  }
+
+  html.is-desktop .room-title .vc-avatar,
+  html.is-electron .room-title .vc-avatar,
+  html.is-pwa.is-desktop .room-title .vc-avatar{
+    width:40px!important;
+    height:40px!important;
+  }
+
+  html.is-desktop .room-title,
+  html.is-electron .room-title,
+  html.is-pwa.is-desktop .room-title{
+    gap:9px!important;
+  }
+
+  html.is-desktop .room-title b,
+  html.is-electron .room-title b,
+  html.is-pwa.is-desktop .room-title b{
+    font-size:14px!important;
+    line-height:17px!important;
+  }
+
+  html.is-desktop .room-title small,
+  html.is-electron .room-title small,
+  html.is-pwa.is-desktop .room-title small{
+    font-size:12px!important;
+    line-height:15px!important;
+  }
+
+  html.is-desktop .messages-content::part(scroll),
+  html.is-electron .messages-content::part(scroll),
+  html.is-pwa.is-desktop .messages-content::part(scroll){
+    padding:16px clamp(22px,6vw,92px) 12px!important;
+  }
+
+  html.is-desktop .message-stack,
+  html.is-electron .message-stack,
+  html.is-pwa.is-desktop .message-stack{
+    max-width:none!important;
+    width:100%!important;
+    gap:3px!important;
+  }
+
+  html.is-desktop .message-line,
+  html.is-electron .message-line,
+  html.is-pwa.is-desktop .message-line{
+    width:100%!important;
+  }
+
+  html.is-desktop .message-bubble,
+  html.is-electron .message-bubble,
+  html.is-pwa.is-desktop .message-bubble{
+    max-width:min(62%,620px)!important;
+    padding:7px 10px 5px!important;
+    border-radius:12px!important;
+    box-shadow:0 1px 2px rgba(0,0,0,.16)!important;
+  }
+
+  html.is-desktop .message-line.mine .message-bubble,
+  html.is-electron .message-line.mine .message-bubble,
+  html.is-pwa.is-desktop .message-line.mine .message-bubble{
+    margin-right:2px!important;
+  }
+
+  html.is-desktop .message-line:not(.mine) .message-bubble,
+  html.is-electron .message-line:not(.mine) .message-bubble,
+  html.is-pwa.is-desktop .message-line:not(.mine) .message-bubble{
+    margin-left:2px!important;
+  }
+
+  html.is-desktop .message-text,
+  html.is-electron .message-text,
+  html.is-pwa.is-desktop .message-text{
+    font-size:14px!important;
+    line-height:19px!important;
+  }
+
+  html.is-desktop .composer-footer,
+  html.is-electron .composer-footer,
+  html.is-pwa.is-desktop .composer-footer{
+    padding:7px 12px 10px!important;
+  }
+
+  html.is-desktop .composer-bar,
+  html.is-electron .composer-bar,
+  html.is-pwa.is-desktop .composer-bar{
+    max-width:none!important;
+    width:min(100%,980px)!important;
+    min-height:48px!important;
+    margin:0 auto!important;
+    padding:4px 6px!important;
+    border-radius:11px!important;
+  }
+
+  html.is-desktop .composer-bar ion-button,
+  html.is-electron .composer-bar ion-button,
+  html.is-pwa.is-desktop .composer-bar ion-button{
+    width:38px!important;
+    height:38px!important;
+    margin:0!important;
+  }
+
+  html.is-desktop .composer-bar ion-textarea,
+  html.is-electron .composer-bar ion-textarea,
+  html.is-pwa.is-desktop .composer-bar ion-textarea{
+    min-height:38px!important;
+    font-size:14px!important;
+  }
+
+  html.is-desktop .reply-composer,
+  html.is-electron .reply-composer,
+  html.is-pwa.is-desktop .reply-composer,
+  html.is-desktop .voice-recorder,
+  html.is-electron .voice-recorder,
+  html.is-pwa.is-desktop .voice-recorder{
+    max-width:none!important;
+    width:min(100%,980px)!important;
+  }
+
+  html.is-desktop .empty-chat .empty-state,
+  html.is-electron .empty-chat .empty-state,
+  html.is-pwa.is-desktop .empty-chat .empty-state{
+    max-width:320px;
+    margin:auto;
+  }
+}
+
+@media (min-width:1180px){
+  html.is-desktop .desktop-shell,
+  html.is-electron .desktop-shell,
+  html.is-pwa.is-desktop .desktop-shell{
+    grid-template-columns:68px 320px minmax(0,1fr)!important;
+  }
+
+  html.is-desktop .chat-list-page,
+  html.is-electron .chat-list-page,
+  html.is-pwa.is-desktop .chat-list-page{
+    width:320px!important;
+    min-width:320px!important;
+    max-width:320px!important;
+  }
+}
