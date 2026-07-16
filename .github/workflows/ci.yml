@@ -40,6 +40,7 @@ jobs:
           node --check apps/server/src/feature-router.js
           node --check apps/server/src/feature-state.js
           node --check apps/server/src/feature-chats.js
+          node --check apps/server/src/feature-contacts.js
           node --check apps/server/src/feature-interactions.js
           node --check apps/server/src/feature-message-pages.js
           node --check apps/server/src/feature-media.js
@@ -61,6 +62,7 @@ jobs:
           node --check apps/client-v2/src/ux-guards.js
           node --check apps/client-v2/src/platform-ui.js
           node --check apps/client-v2/src/tiny-chat-premium.js
+          node --check apps/client-v2/src/tiny-chat-pages.js
           node --check apps/client-v2/src/tiny-chat-final-overrides.js
 
       - name: Build Ionic client v2
