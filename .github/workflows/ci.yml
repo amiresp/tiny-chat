@@ -68,6 +68,7 @@ jobs:
           node --check apps/client-v2/src/tiny-chat-stability.js
           node --check apps/client-v2/src/tiny-chat-final-overrides.js
           node --check apps/client-v2/src/tiny-chat-pro-max.js
+          node --check apps/client-v2/src/tiny-chat-experience-polish.js
 
       - name: Build Ionic client v2
         run: npm run build -w @verdant/client-v2
