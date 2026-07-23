@@ -2,6 +2,12 @@
   "name": "@verdant/client-v2",
   "private": true,
   "version": "0.1.0",
+  "description": "Verdant Chat V2 desktop and web client",
+  "author": "amiresp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amiresp/tiny-chat.git"
+  },
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
