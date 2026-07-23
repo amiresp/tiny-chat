@@ -1,4 +1,5 @@
 import './tiny-chat-media-dropzone.css';
+import { api, assetUrl, getToken } from './api';
 
 const MEDIA_SELECTOR = '.message-media';
 let dragDepth = 0;
@@ -120,6 +121,72 @@ function openMediaViewer(source) {
   viewer.querySelector('.tiny-chat-media-close').focus({ preventScroll: true });
 }
 
+function getActiveChatIdFromNetwork() {
+  const entries = performance.getEntriesByType?.('resource') || [];
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    const name = entries[index]?.name || '';
+    const match = name.match(/\/api\/v2\/chats\/(\d+)\/messages\/page(?:\?|$)/);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+async function resolveGenericFile(chip) {
+  const wrapper = chip.closest('[data-message-id]');
+  const messageId = Number(wrapper?.getAttribute('data-message-id'));
+  const chatId = getActiveChatIdFromNetwork();
+  if (!messageId || !chatId) throw new Error('File message could not be resolved');
+
+  const data = await api(`/api/v2/chats/${chatId}/messages/page?limit=60`);
+  const message = (data.messages || []).find((item) => Number(item.id) === messageId);
+  if (!message?.fileUrl) throw new Error('File is unavailable');
+  return message;
+}
+
+async function downloadGenericFile(chip) {
+  if (chip.dataset.downloading === '1') return;
+  chip.dataset.downloading = '1';
+  chip.classList.add('is-downloading');
+  try {
+    const message = await resolveGenericFile(chip);
+    const url = assetUrl(message.fileUrl);
+    if (!url) throw new Error('File URL is unavailable');
+
+    const headers = {};
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(url, { headers });
+    if (!response.ok) throw new Error(`Download failed (${response.status})`);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = message.fileName || 'download';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch (error) {
+    console.error('Tiny Chat file download failed', error);
+    window.open(chip.dataset.fileUrl || '#', '_blank', 'noopener,noreferrer');
+  } finally {
+    delete chip.dataset.downloading;
+    chip.classList.remove('is-downloading');
+  }
+}
+
+function enhanceFileChips() {
+  document.querySelectorAll('.message-bubble .file-chip').forEach((chip) => {
+    if (chip.dataset.fileDownloadReady === '1') return;
+    chip.dataset.fileDownloadReady = '1';
+    chip.setAttribute('role', 'button');
+    chip.setAttribute('tabindex', '0');
+    chip.setAttribute('title', 'Download file');
+    chip.setAttribute('aria-label', `Download ${chip.textContent?.trim() || 'file'}`);
+  });
+}
+
 document.addEventListener('dragenter', (event) => {
   if (!canAcceptDrop(event)) return;
   event.preventDefault();
@@ -151,6 +218,14 @@ document.addEventListener('drop', (event) => {
 });
 
 document.addEventListener('click', (event) => {
+  const fileChip = event.target.closest?.('.message-bubble .file-chip');
+  if (fileChip) {
+    event.preventDefault();
+    event.stopPropagation();
+    downloadGenericFile(fileChip);
+    return;
+  }
+
   const media = event.target.closest?.(MEDIA_SELECTOR);
   if (!media || !media.closest('.message-bubble')) return;
   event.preventDefault();
@@ -159,8 +234,20 @@ document.addEventListener('click', (event) => {
 }, true);
 
 document.addEventListener('keydown', (event) => {
+  const fileChip = event.target.closest?.('.message-bubble .file-chip');
+  if (fileChip && (event.key === 'Enter' || event.key === ' ')) {
+    event.preventDefault();
+    event.stopPropagation();
+    downloadGenericFile(fileChip);
+    return;
+  }
   if (event.key === 'Escape') {
     hideDropOverlay();
     closeMediaViewer();
   }
 });
+
+const fileChipObserver = new MutationObserver(enhanceFileChips);
+fileChipObserver.observe(document.documentElement, { childList: true, subtree: true });
+window.addEventListener('DOMContentLoaded', enhanceFileChips);
+setTimeout(enhanceFileChips, 250);
