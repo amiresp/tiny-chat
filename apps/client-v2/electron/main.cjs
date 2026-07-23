@@ -1,7 +1,7 @@
 const path = require('node:path');
 const { app, BrowserWindow, Menu, Notification, Tray, ipcMain, nativeImage, shell } = require('electron');
 
-const productionUrl = process.env.ELECTRON_APP_URL || `file://${path.join(__dirname, '../dist/index.html')}`;
+const productionUrl = process.env.ELECTRON_APP_URL || 'https://chat.evaonline.ir';
 const TRAY_ICON_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAw0lEQVR4nO2W0RGCQAxEA2MJWAI0JmVBY1CC9iBfDgdccuuZBFH26+Zgdh/JESA69e8qkJvq2/2ZGzD2VzFDvPhJMApSeoRLflEA7XDJdwNgFc75sy3w0gLA+uljOXAFhq6ioauy9iRBAKHha43uqQBYCgJo2sdmje6ltJhOXoeQaJ6Mx2jBCeAGkPp2aynM+a4KENlXYe0frYAVRMyXbYE2BOe3+0/pJdcYMUeU/RZotejtCmifjWQFwv57DSoW4Cc1AdEHVo2fRDnMAAAAAElFTkSuQmCC';
 
 let mainWindow = null;
