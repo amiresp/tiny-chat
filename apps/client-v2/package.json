@@ -18,7 +18,7 @@
     "android:sync": "npm run build && (test -d android || cap add android) && cap sync android",
     "android:build": "npm run android:sync && cd android && chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon",
     "electron:dir": "npm run build && electron-builder --dir --win --x64 --publish never",
-    "electron:build": "npm run build && electron-builder --win nsis portable --x64 --publish never"
+    "electron:build": "npm run build && electron-builder --win nsis --x64 --publish never"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.1",
@@ -40,6 +40,7 @@
   "build": {
     "appId": "chat.verdant.v2",
     "productName": "Verdant Chat V2",
+    "artifactName": "Verdant Chat V2 Setup ${version}.${ext}",
     "asar": true,
     "directories": {
       "output": "release"
@@ -54,16 +55,13 @@
         {
           "target": "nsis",
           "arch": ["x64"]
-        },
-        {
-          "target": "portable",
-          "arch": ["x64"]
         }
       ]
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "differentialPackage": false
     },
     "electronVersion": "34.5.8"
   }
