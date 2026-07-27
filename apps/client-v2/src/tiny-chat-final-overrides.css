@@ -72,7 +72,6 @@ html[data-theme] .chat-room-page ion-footer{padding-left:0!important;padding-rig
 .composer-bar ion-button svg{display:block!important;width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;margin:auto!important;stroke-width:1.9!important}
 .composer-bar ion-button:last-child svg{width:19px!important;height:19px!important}
 .tiny-emoji-button{font-size:0!important}
-.tiny-emoji-button:before{content:"☺";font-size:24px;line-height:1;color:var(--tiny-muted)}
 .composer-bar ion-textarea{font-size:13.5px!important;line-height:20px!important}
 
 /* Mobile must never contain the desktop rail. */
