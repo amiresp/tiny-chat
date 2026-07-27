@@ -12,6 +12,7 @@ let socket = null;
 let blinkTimer = null;
 let blinkOn = false;
 let refreshTimer = null;
+let presenceFrame = null;
 let faviconLink = document.querySelector('link[rel~="icon"]');
 
 function ensureFavicon() {
@@ -69,6 +70,7 @@ function renderAttention() {
 
   stopBlink();
   if (totalUnread <= 0) {
+    link.type = 'image/svg+xml';
     link.href = DEFAULT_FAVICON;
     return;
   }
@@ -92,12 +94,11 @@ function formatLastSeen(value) {
   if (Number.isNaN(date.getTime())) return 'offline';
 
   const now = new Date();
-  const sameDay = date.toDateString() === now.toDateString();
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  if (sameDay) return `last seen today at ${time}`;
+  if (date.toDateString() === now.toDateString()) return `last seen today at ${time}`;
   if (date.toDateString() === yesterday.toDateString()) return `last seen yesterday at ${time}`;
   return `last seen ${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${time}`;
 }
@@ -106,6 +107,10 @@ function directStatus(chat) {
   if (!chat?.peer || chat.peer.hidePresence) return 'direct message';
   if (chat.peer.isOnline) return 'online';
   return formatLastSeen(chat.peer.lastSeenAt);
+}
+
+function setTextIfChanged(node, value) {
+  if (node && node.textContent !== value) node.textContent = value;
 }
 
 function updatePresenceDom() {
@@ -117,17 +122,23 @@ function updatePresenceDom() {
     if (!title) continue;
     const chat = directChats.find((item) => String(item.title || '').trim() === title);
     if (!chat) continue;
-    const subtitle = row.querySelector('ion-label p, p');
-    if (subtitle) subtitle.textContent = directStatus(chat);
+    setTextIfChanged(row.querySelector('ion-label p, p'), directStatus(chat));
   }
 
   const roomTitle = document.querySelector('.room-title');
   const activeTitle = roomTitle?.querySelector('b')?.textContent?.trim();
   if (roomTitle && activeTitle) {
     const activeChat = directChats.find((item) => String(item.title || '').trim() === activeTitle);
-    const subtitle = roomTitle.querySelector('small');
-    if (activeChat && subtitle) subtitle.textContent = directStatus(activeChat);
+    if (activeChat) setTextIfChanged(roomTitle.querySelector('small'), directStatus(activeChat));
   }
+}
+
+function schedulePresenceDomUpdate() {
+  if (presenceFrame) return;
+  presenceFrame = requestAnimationFrame(() => {
+    presenceFrame = null;
+    updatePresenceDom();
+  });
 }
 
 async function refreshChats() {
@@ -143,7 +154,7 @@ async function refreshChats() {
     chats = data.chats || [];
     totalUnread = chats.reduce((sum, chat) => sum + Number(chat.unreadCount || 0), 0);
     renderAttention();
-    requestAnimationFrame(updatePresenceDom);
+    schedulePresenceDomUpdate();
   } catch {
     // Keep the existing UI state if the connection is temporarily unavailable.
   }
@@ -169,7 +180,7 @@ function applyPresence(event) {
       },
     };
   });
-  if (changed) updatePresenceDom();
+  if (changed) schedulePresenceDomUpdate();
 }
 
 function disconnectSocket() {
@@ -197,7 +208,7 @@ function connectSocket() {
   socket.on('connect', () => scheduleRefresh(50));
 }
 
-const observer = new MutationObserver(() => updatePresenceDom());
+const observer = new MutationObserver(schedulePresenceDomUpdate);
 observer.observe(document.documentElement, { childList: true, subtree: true });
 
 document.addEventListener('visibilitychange', () => {
@@ -220,7 +231,7 @@ document.addEventListener('click', (event) => {
 }, true);
 
 window.setInterval(() => {
-  updatePresenceDom();
+  schedulePresenceDomUpdate();
   if (!document.hidden) scheduleRefresh(0);
 }, 60_000);
 
