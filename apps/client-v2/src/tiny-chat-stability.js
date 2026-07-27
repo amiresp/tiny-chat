@@ -15,6 +15,7 @@ const EMOJI_GROUPS = {
 const RECENT_KEY = 'tiny-chat-recent-emojis';
 let picker = null;
 let activeTextarea = null;
+let activeEmojiGroup = 'Smileys';
 
 function dedupeAdminTabs() {
   document.querySelectorAll('.tiny-settings-nav').forEach((nav) => {
@@ -73,7 +74,7 @@ async function insertEmoji(textarea, emoji) {
   saveRecent(emoji);
 }
 
-function renderEmojiGrid(group = 'Recent', query = '') {
+function renderEmojiGrid(group = activeEmojiGroup, query = '') {
   if (!picker) return;
   const grid = picker.querySelector('[data-emoji-grid]');
   const empty = picker.querySelector('[data-emoji-empty]');
@@ -126,7 +127,7 @@ function openPicker(button) {
       <button type="button" data-close aria-label="Close emoji picker">×</button>
     </header>
     <nav data-emoji-tabs>
-      ${Object.keys(EMOJI_GROUPS).map((name, index) => `<button type="button" data-group="${name}" class="${index === 0 ? 'active' : ''}" title="${name}">${name === 'Recent' ? '🕘' : EMOJI_GROUPS[name][0]}</button>`).join('')}
+      ${Object.keys(EMOJI_GROUPS).map((name) => `<button type="button" data-group="${name}" class="${name === activeEmojiGroup ? 'active' : ''}" title="${name}">${name === 'Recent' ? '🕘' : EMOJI_GROUPS[name][0]}</button>`).join('')}
     </nav>
     <div class="tiny-emoji-grid" data-emoji-grid></div>
     <div class="tiny-emoji-empty" data-emoji-empty hidden>No emojis found.</div>
@@ -134,24 +135,25 @@ function openPicker(button) {
   document.body.appendChild(picker);
   document.documentElement.classList.add('tiny-emoji-open');
   positionPicker(button);
-  renderEmojiGrid('Recent');
+  renderEmojiGrid(activeEmojiGroup);
 
   const search = picker.querySelector('input[type="search"]');
   picker.querySelector('[data-close]').addEventListener('click', closePicker);
   picker.querySelector('[data-emoji-tabs]').addEventListener('click', (event) => {
     const tab = event.target.closest('[data-group]');
     if (!tab) return;
+    activeEmojiGroup = tab.dataset.group;
     picker.querySelectorAll('[data-group]').forEach((item) => item.classList.toggle('active', item === tab));
     search.value = '';
-    renderEmojiGrid(tab.dataset.group);
+    renderEmojiGrid(activeEmojiGroup);
   });
   picker.querySelector('[data-emoji-grid]').addEventListener('click', async (event) => {
     const emojiButton = event.target.closest('[data-emoji]');
     if (!emojiButton) return;
     await insertEmoji(activeTextarea, emojiButton.dataset.emoji);
-    renderEmojiGrid('Recent');
+    if (activeEmojiGroup === 'Recent') renderEmojiGrid('Recent');
   });
-  search.addEventListener('input', () => renderEmojiGrid('Recent', search.value));
+  search.addEventListener('input', () => renderEmojiGrid(activeEmojiGroup, search.value));
   setTimeout(() => search.focus(), 50);
 }
 
