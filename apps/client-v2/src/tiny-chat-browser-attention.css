@@ -1,0 +1,28 @@
+/* Read receipts: make the seen state visibly different from sent/delivered. */
+.message-status.seen {
+  color: #67e8f9 !important;
+  opacity: 1 !important;
+  text-shadow: 0 0 10px rgba(103, 232, 249, 0.34);
+}
+
+.message-status.seen svg {
+  stroke-width: 2.6;
+}
+
+/* iOS Safari zooms focused form controls whose computed font size is below 16px. */
+.composer-bar ion-textarea {
+  font-size: 16px !important;
+  --font-size: 16px;
+}
+
+.composer-bar ion-textarea::part(native) {
+  font-size: 16px !important;
+  line-height: 1.4;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .composer-bar ion-textarea,
+  .composer-bar ion-textarea::part(native) {
+    font-size: 16px !important;
+  }
+}
