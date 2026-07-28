@@ -4,12 +4,10 @@ import './tiny-chat-client-polish.css';
 const DEFAULT_TITLE = 'Tiny Chat';
 const DEFAULT_FAVICON = '/icon.svg';
 
-let chats = [];
+let chats = Array.isArray(window.__tinyChatChatCache) ? window.__tinyChatChatCache : [];
 let refreshTimer = null;
 let pollingTimer = null;
 let blinkTimer = null;
-let listObserver = null;
-let observedList = null;
 let cachedUnread = -1;
 let faviconLink = document.querySelector('link[rel~="icon"]');
 const faviconCache = new Map();
@@ -93,12 +91,6 @@ function renderUnread(count) {
   }
 }
 
-function unreadFromDom() {
-  const total = [...document.querySelectorAll('.chat-list .chat-row ion-badge')]
-    .reduce((sum, badge) => sum + (Number.parseInt(badge.textContent || '0', 10) || 0), 0);
-  if (total !== cachedUnread) renderUnread(total);
-}
-
 function formatLastSeen(value) {
   if (!value) return 'offline';
   const date = new Date(value);
@@ -119,72 +111,66 @@ function presenceText(chat) {
   return chat.peer.isOnline ? 'online' : formatLastSeen(chat.peer.lastSeenAt);
 }
 
-function chatByTitle(title) {
-  const normalized = String(title || '').trim();
-  return chats.find((chat) => chat.type === 'direct' && String(chat.title || '').trim() === normalized);
+function chatForRow(row) {
+  const id = Number(row?.dataset.chatId || 0);
+  if (id) {
+    const byId = chats.find((chat) => Number(chat.id) === id);
+    if (byId) return byId;
+  }
+  const title = row?.querySelector('h2')?.textContent?.trim();
+  return chats.find((chat) => chat.type === 'direct' && String(chat.title || '').trim() === title) || null;
 }
 
 function applyPresence() {
   for (const row of document.querySelectorAll('.chat-list .chat-row')) {
-    const chat = chatByTitle(row.querySelector('h2')?.textContent);
-    if (!chat) continue;
+    const chat = chatForRow(row);
+    if (!chat || chat.type !== 'direct') continue;
     row.classList.toggle('is-online', Boolean(chat.peer?.isOnline && !chat.peer?.hidePresence));
     const subtitle = row.querySelector('ion-label p, p');
-    const value = presenceText(chat);
-    if (subtitle && subtitle.textContent !== value && !chat.lastMessageBody && !chat.lastMessageFileName) subtitle.textContent = value;
+    if (subtitle && !chat.lastMessageBody && !chat.lastMessageFileName) {
+      const value = presenceText(chat);
+      if (subtitle.textContent !== value) subtitle.textContent = value;
+    }
   }
 
   const roomTitle = document.querySelector('.room-title');
-  const chat = chatByTitle(roomTitle?.querySelector('b')?.textContent);
+  const activeTitle = roomTitle?.querySelector('b')?.textContent?.trim();
+  const active = chats.find((chat) => chat.type === 'direct' && String(chat.title || '').trim() === activeTitle);
   const subtitle = roomTitle?.querySelector('small');
-  if (chat && subtitle) {
-    const value = presenceText(chat);
+  if (active && subtitle) {
+    const value = presenceText(active);
     if (subtitle.textContent !== value) subtitle.textContent = value;
   }
 }
 
-function bindChatListObserver() {
-  const list = document.querySelector('.chat-list');
-  if (!list || list === observedList) return;
-  listObserver?.disconnect();
-  observedList = list;
-  listObserver = new MutationObserver(() => {
-    unreadFromDom();
-    applyPresence();
-  });
-  listObserver.observe(list, { childList: true, subtree: true, characterData: true });
-  unreadFromDom();
-  applyPresence();
+function applyChats(nextChats) {
+  chats = Array.isArray(nextChats) ? nextChats : [];
+  renderUnread(chats.reduce((sum, chat) => sum + Number(chat.unreadCount || 0), 0));
+  requestAnimationFrame(applyPresence);
+  window.setTimeout(applyPresence, 120);
 }
 
 async function refreshChats() {
   if (!getToken()) {
-    chats = [];
-    renderUnread(0);
+    applyChats([]);
     return;
   }
   try {
     const data = await api('/api/v2/chats');
-    chats = Array.isArray(data.chats) ? data.chats : [];
-    renderUnread(chats.reduce((sum, chat) => sum + Number(chat.unreadCount || 0), 0));
-    bindChatListObserver();
-    applyPresence();
+    applyChats(data.chats || []);
   } catch {
-    // UI remains usable while temporarily offline.
+    // Keep the current client state while temporarily offline.
   }
 }
 
-function scheduleRefresh(delay = 100) {
+function scheduleRefresh(delay = 80) {
   window.clearTimeout(refreshTimer);
   refreshTimer = window.setTimeout(refreshChats, delay);
 }
 
-function restartPolling() {
-  if (pollingTimer) window.clearInterval(pollingTimer);
-  pollingTimer = window.setInterval(() => {
-    if (!document.hidden) refreshChats();
-  }, 60_000);
-}
+document.addEventListener('tiny-chat:chats-loaded', (event) => {
+  applyChats(event.detail?.chats || []);
+});
 
 document.addEventListener('visibilitychange', () => {
   renderUnread(cachedUnread < 0 ? 0 : cachedUnread);
@@ -194,24 +180,22 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('focus', () => scheduleRefresh(50));
 window.addEventListener('online', () => scheduleRefresh(50));
 window.addEventListener('verdant-auth-change', () => scheduleRefresh(50));
-window.addEventListener('resize', bindChatListObserver, { passive: true });
 
 document.addEventListener('click', (event) => {
-  if (event.target.closest('.chat-row,.room-title,.back-arrow')) {
-    window.setTimeout(() => {
-      bindChatListObserver();
-      applyPresence();
-      unreadFromDom();
-    }, 120);
+  if (event.target.closest?.('.chat-row,.room-title,.back-arrow')) {
+    window.setTimeout(applyPresence, 100);
   }
 }, true);
 
+pollingTimer = window.setInterval(() => {
+  if (!document.hidden) refreshChats();
+}, 60_000);
+
 window.addEventListener('beforeunload', () => {
-  listObserver?.disconnect();
   stopBlink();
+  window.clearTimeout(refreshTimer);
   if (pollingTimer) window.clearInterval(pollingTimer);
 });
 
-bindChatListObserver();
-refreshChats();
-restartPolling();
+if (chats.length) applyChats(chats);
+else refreshChats();
