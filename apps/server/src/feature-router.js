@@ -10,6 +10,7 @@ import { createMediaFeatureRouter } from './feature-media.js';
 import { createRetentionRouter } from './feature-retention.js';
 import { createContactsRouter } from './feature-contacts.js';
 import { createChatManagementRouter } from './feature-chat-management.js';
+import { createHiddenChatsRouter } from './feature-hidden-chats.js';
 
 export function createFeatureRouter({ io }) {
   const router = express.Router();
@@ -21,6 +22,7 @@ export function createFeatureRouter({ io }) {
   router.use(createMessagePageRouter());
   router.use(createMediaFeatureRouter());
   router.use(createInteractionRouter());
+  router.use(createHiddenChatsRouter());
   router.use(createChatFeatureRouter({ io }));
   router.use(createOnlineFeatureRouter());
   router.use(createAvatarFeatureRouter());
