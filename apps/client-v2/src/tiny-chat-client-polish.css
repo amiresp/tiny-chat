@@ -1,0 +1,234 @@
+/* Final client-v2 polish layer. Loaded after all legacy theme CSS. */
+:root {
+  --ion-font-family: 'Vazirmatn', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+html,
+body,
+#root,
+ion-app,
+ion-content,
+ion-header,
+ion-footer,
+ion-toolbar,
+ion-item,
+ion-label,
+ion-title,
+ion-button,
+ion-input,
+ion-textarea,
+ion-searchbar,
+ion-select,
+ion-segment,
+ion-segment-button,
+button,
+input,
+textarea,
+select,
+.tiny-real-page,
+.tiny-emoji-picker,
+.tiny-confirm-layer {
+  font-family: 'Vazirmatn', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+/* Legacy CSS hard-coded Inter through font shorthand. Keep every custom control on Vazirmatn. */
+.tiny-chat-filters button,
+.tiny-auth-theme button,
+.tiny-mobile-nav button,
+.tiny-empty-actions button,
+.tiny-contact-actions button,
+.tiny-settings-nav button,
+.tiny-settings-form input,
+.tiny-settings-form select,
+.tiny-primary-button,
+.tiny-profile-actions button,
+.tiny-session-list button,
+.tiny-page-search input {
+  font-family: 'Vazirmatn', ui-sans-serif, system-ui, sans-serif !important;
+}
+
+/* The old speech tails conflict with the newer square-corner bubbles and render as cyan bars. */
+.message-bubble::after,
+.message-line:not(.mine) .message-bubble::after,
+.message-bubble.mine::after {
+  content: none !important;
+  display: none !important;
+  border: 0 !important;
+}
+
+/* Compact, even header actions. Chat info is already accessible by clicking the room title. */
+.chat-room-page ion-header ion-buttons[slot='end'] {
+  gap: 0 !important;
+  margin-inline: 0 2px !important;
+}
+
+.chat-room-page ion-header ion-buttons[slot='end'] > ion-button:last-child:not(.tiny-delete-chat-button) {
+  display: none !important;
+}
+
+.chat-room-page .tiny-chat-header-action,
+.chat-room-page ion-header ion-buttons ion-button,
+.chat-room-page .tiny-delete-chat-button {
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  margin: 0 !important;
+}
+
+.chat-room-page .tiny-chat-header-action svg,
+.chat-room-page ion-header ion-buttons ion-button svg,
+.chat-room-page .tiny-delete-chat-button svg {
+  width: 19px !important;
+  height: 19px !important;
+  min-width: 19px !important;
+  min-height: 19px !important;
+}
+
+/* Chat list rhythm: tighter rows, consistent avatar/text offset, no oversized dead space. */
+.chat-list {
+  padding: 5px 7px 10px !important;
+}
+
+.chat-row {
+  min-height: 66px !important;
+  margin: 1px 0 !important;
+  --padding-start: 7px !important;
+  --inner-padding-end: 7px !important;
+}
+
+.chat-row .vc-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  margin-inline-end: 10px !important;
+  margin-right: 10px !important;
+}
+
+.chat-row.is-online .vc-avatar::after {
+  right: 1px !important;
+  bottom: 1px !important;
+  width: 10px !important;
+  height: 10px !important;
+  border-width: 2px !important;
+}
+
+.chat-row ion-label {
+  margin: 0 !important;
+  padding-right: 43px !important;
+}
+
+.chat-row ion-label h2 {
+  margin-bottom: 2px !important;
+  line-height: 19px !important;
+}
+
+.chat-row ion-label p {
+  line-height: 17px !important;
+}
+
+/* Message metadata must sit inside the bubble with no stray edge artifact. */
+.message-bubble time {
+  gap: 3px !important;
+  margin-top: 2px !important;
+  padding: 0 !important;
+}
+
+.message-status {
+  margin-inline-start: 1px !important;
+  line-height: 1 !important;
+}
+
+.message-status.seen {
+  color: #67e8f9 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+.message-status.seen svg {
+  stroke-width: 2.35 !important;
+}
+
+/* Composer: equal outer gutters, compact controls, and no empty strip before the textarea/send button. */
+.composer-footer {
+  padding: 0 8px max(8px, env(safe-area-inset-bottom)) !important;
+}
+
+.composer-bar {
+  min-height: 52px !important;
+  align-items: center !important;
+  gap: 2px !important;
+  padding: 4px 5px !important;
+  border-radius: 17px !important;
+}
+
+.composer-bar ion-button,
+.composer-bar .tiny-emoji-button {
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  flex: 0 0 38px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+}
+
+.composer-bar ion-button svg,
+.composer-bar .tiny-emoji-button svg {
+  width: 19px !important;
+  height: 19px !important;
+  min-width: 19px !important;
+  min-height: 19px !important;
+}
+
+.composer-bar ion-button:last-child {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  flex-basis: 40px !important;
+  border-radius: 12px !important;
+}
+
+.composer-bar ion-textarea {
+  --background: transparent !important;
+  --padding-start: 3px !important;
+  --padding-end: 3px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  line-height: 20px !important;
+  font-family: 'Vazirmatn', ui-sans-serif, system-ui, sans-serif !important;
+}
+
+.composer-bar ion-textarea::part(native) {
+  padding-inline: 3px !important;
+  font-family: 'Vazirmatn', ui-sans-serif, system-ui, sans-serif !important;
+}
+
+@media (min-width: 768px) {
+  .composer-bar ion-textarea,
+  .composer-bar ion-textarea::part(native) {
+    font-size: 14px !important;
+  }
+}
+
+/* iOS Safari focus zoom guard. */
+@media (max-width: 767px) {
+  .composer-footer {
+    padding-inline: 6px !important;
+  }
+
+  .composer-bar ion-textarea,
+  .composer-bar ion-textarea::part(native),
+  ion-input,
+  ion-searchbar,
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
