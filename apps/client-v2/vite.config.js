@@ -2,15 +2,13 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-function normalizeClientFonts() {
+function stripLegacyGoogleFontImport() {
   return {
-    name: 'tiny-chat-normalize-client-fonts',
+    name: 'tiny-chat-strip-legacy-google-font-import',
     enforce: 'pre',
     transform(code, id) {
       if (!id.includes('/apps/client-v2/src/') || !id.split('?')[0].endsWith('.css')) return null;
-      const next = code
-        .replace(/@import\s+url\(['"]?https:\/\/fonts\.googleapis\.com\/css2\?family=Inter[^;]+;\s*/gi, '')
-        .replace(/\bInter\b/g, "'Vazirmatn'");
+      const next = code.replace(/@import\s+url\(['"]?https:\/\/fonts\.googleapis\.com\/css2\?family=Inter[^;]+;\s*/gi, '');
       return next === code ? null : { code: next, map: null };
     },
   };
@@ -22,7 +20,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      normalizeClientFonts(),
+      stripLegacyGoogleFontImport(),
       react(),
       VitePWA({
         registerType: 'autoUpdate',
