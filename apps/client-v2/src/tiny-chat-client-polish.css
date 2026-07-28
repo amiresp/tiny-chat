@@ -1,6 +1,8 @@
-/* Safe final overrides only. No shell/grid/width/spacing changes live here. */
+/* Final canonical client rules. This file is loaded last on purpose. */
 :root {
   --ion-font-family: 'Vazirmatn', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  --tiny-canonical-rail: 72px;
+  --tiny-canonical-list: 340px;
 }
 
 html body *,
@@ -26,7 +28,162 @@ select {
   font-family: 'Vazirmatn', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
 }
 
-/* Remove only the broken legacy speech-tail artifact. */
+/*
+ * Canonical desktop geometry.
+ * Older theme layers use both a padded two-column shell and a three-column shell.
+ * Neutralise both approaches here so there is exactly one layout model.
+ */
+@media (min-width: 1024px) {
+  html,
+  body,
+  #root,
+  ion-app {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  body:has(.desktop-shell),
+  html[data-theme] body:has(.desktop-shell) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .desktop-shell,
+  html.tiny-has-desktop-rail .desktop-shell {
+    display: grid !important;
+    grid-template-columns: var(--tiny-canonical-rail) var(--tiny-canonical-list) minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .desktop-shell > .tiny-navigation-rail,
+  html.tiny-has-desktop-rail .desktop-shell > .tiny-navigation-rail {
+    position: relative !important;
+    inset: auto !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: var(--tiny-canonical-rail) !important;
+    min-width: var(--tiny-canonical-rail) !important;
+    max-width: var(--tiny-canonical-rail) !important;
+    height: 100dvh !important;
+    flex: 0 0 var(--tiny-canonical-rail) !important;
+    margin: 0 !important;
+  }
+
+  .desktop-shell > .chat-list-page,
+  html.tiny-has-desktop-rail .desktop-shell > .chat-list-page {
+    position: relative !important;
+    inset: auto !important;
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    width: var(--tiny-canonical-list) !important;
+    min-width: var(--tiny-canonical-list) !important;
+    max-width: var(--tiny-canonical-list) !important;
+    height: 100dvh !important;
+    flex: 0 0 var(--tiny-canonical-list) !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  .desktop-shell > .main-pane,
+  html.tiny-has-desktop-rail .desktop-shell > .main-pane {
+    position: relative !important;
+    inset: auto !important;
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    flex: 1 1 auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    overflow: hidden !important;
+  }
+
+  .main-pane > .ion-page,
+  .main-pane > ion-page,
+  .main-pane .chat-room-page,
+  .main-pane .empty-chat {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 100% !important;
+  }
+}
+
+/* Tablet keeps the rail out and reserves a predictable chat-list column. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  body:has(.desktop-shell) {
+    padding: 0 !important;
+  }
+
+  .desktop-shell {
+    display: grid !important;
+    grid-template-columns: 320px minmax(0, 1fr) !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+  }
+
+  .tiny-navigation-rail {
+    display: none !important;
+  }
+
+  .chat-list-page {
+    grid-column: 1 !important;
+    width: 320px !important;
+    min-width: 320px !important;
+    max-width: 320px !important;
+  }
+
+  .main-pane {
+    grid-column: 2 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+/*
+ * Long links were collapsing bubbles down to their 72px minimum because the
+ * button is a flex item and the text allowed aggressive word breaking.
+ * fit-content lets normal messages stay compact while long URLs grow to the cap.
+ */
+.message-line {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.message-bubble {
+  width: fit-content !important;
+  min-width: 72px !important;
+  max-width: min(66%, 680px) !important;
+}
+
+.message-text {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+@media (max-width: 767px) {
+  .message-bubble {
+    max-width: 88% !important;
+  }
+}
+
+/* Remove the broken legacy speech-tail artifact only. */
 .message-bubble::after,
 .message-line:not(.mine) .message-bubble::after,
 .message-bubble.mine::after {
@@ -35,7 +192,7 @@ select {
   border: 0 !important;
 }
 
-/* Seen state stays visually distinct without touching message geometry. */
+/* Seen state stays visually distinct. */
 .message-status.seen {
   color: #67e8f9 !important;
   opacity: 1 !important;
@@ -46,7 +203,7 @@ select {
   stroke-width: 2.35 !important;
 }
 
-/* Hidden chats are only visible in the secret reveal mode. Keep layout unchanged. */
+/* Hidden chats are only visible in the secret reveal mode. */
 html.tiny-show-hidden-chats .chat-row.tiny-hidden-chat {
   opacity: .62 !important;
 }
