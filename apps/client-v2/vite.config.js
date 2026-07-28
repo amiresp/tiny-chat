@@ -2,12 +2,27 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+function normalizeClientFonts() {
+  return {
+    name: 'tiny-chat-normalize-client-fonts',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!id.includes('/apps/client-v2/src/') || !id.split('?')[0].endsWith('.css')) return null;
+      const next = code
+        .replace(/@import\s+url\(['"]?https:\/\/fonts\.googleapis\.com\/css2\?family=Inter[^;]+;\s*/gi, '')
+        .replace(/\bInter\b/g, "'Vazirmatn'");
+      return next === code ? null : { code: next, map: null };
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const proxyTarget = env.VITE_PROXY_TARGET || 'http://127.0.0.1:3001';
 
   return {
     plugins: [
+      normalizeClientFonts(),
       react(),
       VitePWA({
         registerType: 'autoUpdate',
