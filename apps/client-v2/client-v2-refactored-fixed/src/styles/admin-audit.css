@@ -1,0 +1,62 @@
+.admin-chat-audit-summary > svg,
+.admin-chat-audit-message > svg {
+  margin-inline-end: 10px;
+  color: var(--vc-accent);
+  flex: none;
+}
+
+.admin-chat-audit-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 28px 12px;
+  color: var(--vc-muted);
+}
+
+.admin-chat-audit-error {
+  display: block;
+  padding: 14px 4px;
+}
+
+.admin-chat-audit-list {
+  background: transparent;
+}
+
+.admin-chat-audit-message ion-label {
+  min-width: 0;
+}
+
+.admin-chat-audit-message h2 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-chat-audit-meta {
+  color: var(--vc-muted) !important;
+  font-size: 11px !important;
+}
+
+.admin-chat-audit-body {
+  margin-top: 5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+  color: var(--vc-text);
+}
+
+.admin-chat-audit-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: var(--vc-accent);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.admin-chat-audit-file:hover {
+  text-decoration: underline;
+}

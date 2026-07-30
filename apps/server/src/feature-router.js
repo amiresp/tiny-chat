@@ -11,6 +11,7 @@ import { createRetentionRouter } from './feature-retention.js';
 import { createContactsRouter } from './feature-contacts.js';
 import { createChatManagementRouter } from './feature-chat-management.js';
 import { createHiddenChatsRouter } from './feature-hidden-chats.js';
+import { createAdminChatAuditRouter } from './feature-admin-chat-audit.js';
 
 export function createFeatureRouter({ io }) {
   const router = express.Router();
@@ -18,6 +19,7 @@ export function createFeatureRouter({ io }) {
   router.use(createRssProxyRouter());
   router.use(createContactsRouter());
   router.use(createChatManagementRouter());
+  router.use(createAdminChatAuditRouter());
   router.use(createFeaturePackRouter());
   router.use(createMessagePageRouter());
   router.use(createMediaFeatureRouter());
