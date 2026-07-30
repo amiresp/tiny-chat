@@ -17,6 +17,7 @@ import { Download, MessageSquareText, X } from 'lucide-react';
 import { api, assetUrl } from '../api';
 import { Avatar } from '../components/Avatar';
 import { formatDate } from '../lib/chat';
+import '../styles/admin-audit.css';
 
 function userName(user) {
   return user?.displayName || user?.username || (user?.id ? `User #${user.id}` : 'Unknown user');
@@ -33,6 +34,7 @@ function messageDescription(message) {
 }
 
 export function AdminChatViewerModal({ open, chat, onClose }) {
+  const chatId = chat?.id;
   const [detail, setDetail] = useState(null);
   const [messages, setMessages] = useState([]);
   const [hasMore, setHasMore] = useState(false);
@@ -42,11 +44,11 @@ export function AdminChatViewerModal({ open, chat, onClose }) {
   const [error, setError] = useState('');
 
   const loadPage = useCallback(async ({ before = null, prepend = false } = {}) => {
-    if (!chat?.id) return;
+    if (!chatId) return;
     const query = new URLSearchParams({ limit: '200' });
     if (before) query.set('before', String(before));
-    const data = await api(`/api/v2/admin/audit/chats/${chat.id}/messages?${query}`);
-    setDetail(data.chat || chat);
+    const data = await api(`/api/v2/admin/audit/chats/${chatId}/messages?${query}`);
+    if (data.chat) setDetail(data.chat);
     setHasMore(Boolean(data.hasMore));
     setNextBefore(data.nextBefore || null);
     setMessages((current) => {
@@ -55,10 +57,10 @@ export function AdminChatViewerModal({ open, chat, onClose }) {
       const byId = new Map([...incoming, ...current].map((message) => [Number(message.id), message]));
       return [...byId.values()].sort((a, b) => Number(a.id) - Number(b.id));
     });
-  }, [chat?.id]);
+  }, [chatId]);
 
   useEffect(() => {
-    if (!open || !chat?.id) return undefined;
+    if (!open || !chatId) return undefined;
     let alive = true;
     setDetail(chat);
     setMessages([]);
@@ -72,10 +74,10 @@ export function AdminChatViewerModal({ open, chat, onClose }) {
       .finally(() => { if (alive) setLoading(false); });
 
     return () => { alive = false; };
-  }, [open, chat?.id, loadPage]);
+  }, [open, chatId, loadPage]);
 
   const participants = detail?.participants || chat?.participants || [];
-  const title = detail?.displayTitle || chat?.displayTitle || chat?.title || `Chat #${chat?.id || ''}`;
+  const title = detail?.displayTitle || chat?.displayTitle || chat?.title || `Chat #${chatId || ''}`;
   const participantText = useMemo(
     () => participants.map((participant) => `${userName(participant)} (@${participant.username || '—'})`).join(' · '),
     [participants],
@@ -107,7 +109,7 @@ export function AdminChatViewerModal({ open, chat, onClose }) {
         <IonLabel className="ion-text-wrap">
           <h2>{title}</h2>
           <p>{participantText || 'No participants'}</p>
-          <p>{detail?.type || chat?.type} · Chat #{detail?.id || chat?.id}</p>
+          <p>{detail?.type || chat?.type} · Chat #{detail?.id || chatId}</p>
         </IonLabel>
       </IonItem>
 
