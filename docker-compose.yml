@@ -16,6 +16,8 @@ services:
     working_dir: /app
     env_file:
       - .env
+    environment:
+      PORT: "9997"
     command: ["npm", "run", "dev", "-w", "@verdant/server"]
     expose:
       - "9997"
