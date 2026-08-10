@@ -26,23 +26,52 @@ function faviconLink() {
   return link;
 }
 
-export function useBrowserAttention(chats) {
+export function useBrowserAttention(chats, activeChatId = null) {
   useEffect(() => {
-    const count = chats.reduce((sum, chat) => sum + Number(chat.unreadCount || 0), 0);
     const link = faviconLink();
-    const normal = count > 0 ? makeUnreadIcon(count, false) : DEFAULT_FAVICON;
-    const dimmed = count > 0 ? makeUnreadIcon(count, true) : DEFAULT_FAVICON;
-    let timer = null; let flip = false;
+    let timer = null;
+    let flip = false;
+
+    const unreadCount = () => {
+      const activelyReading = !document.hidden && document.hasFocus() && activeChatId;
+      return chats.reduce((sum, chat) => {
+        if (activelyReading && Number(chat.id) === Number(activeChatId)) return sum;
+        return sum + Number(chat.unreadCount || 0);
+      }, 0);
+    };
+
     const render = () => {
+      const count = unreadCount();
+      const normal = count > 0 ? makeUnreadIcon(count, false) : DEFAULT_FAVICON;
+      const dimmed = count > 0 ? makeUnreadIcon(count, true) : DEFAULT_FAVICON;
       document.title = count > 0 ? `(${count > 99 ? '99+' : count}) ${DEFAULT_TITLE}` : DEFAULT_TITLE;
       window.clearInterval(timer);
       timer = null;
-      if (!count) { link.type = 'image/svg+xml'; link.href = DEFAULT_FAVICON; return; }
-      link.type = 'image/png'; link.href = normal;
-      if (document.hidden) timer = window.setInterval(() => { flip = !flip; link.href = flip ? dimmed : normal; }, 700);
+      flip = false;
+      if (!count) {
+        link.type = 'image/svg+xml';
+        link.href = DEFAULT_FAVICON;
+        return;
+      }
+      link.type = 'image/png';
+      link.href = normal;
+      if (document.hidden) {
+        timer = window.setInterval(() => {
+          flip = !flip;
+          link.href = flip ? dimmed : normal;
+        }, 700);
+      }
     };
+
     render();
     document.addEventListener('visibilitychange', render);
-    return () => { document.removeEventListener('visibilitychange', render); window.clearInterval(timer); };
-  }, [chats]);
+    window.addEventListener('focus', render);
+    window.addEventListener('blur', render);
+    return () => {
+      document.removeEventListener('visibilitychange', render);
+      window.removeEventListener('focus', render);
+      window.removeEventListener('blur', render);
+      window.clearInterval(timer);
+    };
+  }, [chats, activeChatId]);
 }
