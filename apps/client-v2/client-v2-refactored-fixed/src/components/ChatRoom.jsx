@@ -16,6 +16,38 @@ function PinnedBanner({ message, onJump, onUnpin }) {
   return <div className="pinned-banner"><Pin size={17} /><button type="button" onClick={onJump}><b>Pinned message</b><small>{snippet(message)}</small></button><IonButton fill="clear" onClick={onUnpin} aria-label="Unpin"><X size={16} /></IonButton></div>;
 }
 
+function formatLastSeen(value) {
+  if (!value) return 'offline';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'offline';
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (date.toDateString() === now.toDateString()) return `last seen today at ${time}`;
+  if (date.toDateString() === yesterday.toDateString()) return `last seen yesterday at ${time}`;
+  return `last seen ${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${time}`;
+}
+
+function chatSubtitle(chat) {
+  if (chat?.type !== 'direct') return chat?.type || '';
+  if (chat.peer?.hidePresence) return 'direct message';
+  if (chat.peer?.isOnline) return 'online';
+  return formatLastSeen(chat.peer?.lastSeenAt);
+}
+
+function pastedImageFile(event) {
+  const clipboard = event.clipboardData || event.nativeEvent?.clipboardData;
+  if (!clipboard) return null;
+  const item = Array.from(clipboard.items || []).find((entry) => entry.kind === 'file' && entry.type?.startsWith('image/'));
+  const file = item?.getAsFile?.() || Array.from(clipboard.files || []).find((entry) => entry.type?.startsWith('image/'));
+  if (!file) return null;
+  if (file.name) return file;
+  const subtype = String(file.type || 'image/png').split('/')[1]?.toLowerCase() || 'png';
+  const extension = subtype === 'jpeg' ? 'jpg' : subtype.replace(/[^a-z0-9]/g, '') || 'png';
+  return new File([file], `pasted-image-${Date.now()}.${extension}`, { type: file.type || 'image/png' });
+}
+
 export const ChatRoom = memo(function ChatRoom({
   user, chat, messages, loading, text, setText, replyTo, onCancelReply, onSend,
   onBack, onRefresh, onFile, onInfo, onSearch, onOpenFiles, onSelectMessage,
@@ -85,6 +117,15 @@ export const ChatRoom = memo(function ChatRoom({
     if (file) setPendingFile(file);
   }
 
+  function paste(event) {
+    if (recording) return;
+    const file = pastedImageFile(event);
+    if (!file) return;
+    event.preventDefault();
+    setEmojiOpen(false);
+    setPendingFile(file);
+  }
+
   async function sendPendingFile() {
     const file = pendingFile;
     if (!file) return;
@@ -97,7 +138,7 @@ export const ChatRoom = memo(function ChatRoom({
       <IonHeader translucent>
         <IonToolbar>
           <IonButtons slot="start"><IonButton className="desktop-hidden back-arrow" fill="clear" onClick={onBack} aria-label="Back to chats"><ChevronLeft size={26} /></IonButton></IonButtons>
-          <button type="button" className="room-title" onClick={onInfo}><Avatar entity={chat} icon={chat.type === 'saved' ? '★' : chat.type === 'group' ? 'G' : undefined} /><span><b>{chat.title}</b><small>{chat.type === 'direct' && chat.peer?.isOnline ? 'online' : chat.type}</small></span></button>
+          <button type="button" className="room-title" onClick={onInfo}><Avatar entity={chat} icon={chat.type === 'saved' ? '★' : chat.type === 'group' ? 'G' : undefined} /><span><b>{chat.title}</b><small>{chatSubtitle(chat)}</small></span></button>
           <IonButtons slot="end"><IonButton onClick={onSearch} aria-label="Search messages"><Search size={19} /></IonButton><IonButton onClick={onOpenFiles} aria-label="Files"><Image size={19} /></IonButton>{chat.type !== 'saved' && <IonButton color="danger" onClick={() => setConfirmDelete(true)} aria-label="Delete chat"><Trash2 size={18} /></IonButton>}<IonButton onClick={onInfo} aria-label="Chat info"><Info size={19} /></IonButton></IonButtons>
         </IonToolbar>
         {upload && <IonProgressBar value={upload.percent / 100} color="primary" />}
@@ -119,7 +160,7 @@ export const ChatRoom = memo(function ChatRoom({
         <div className="composer-bar">
           <IonButton fill="clear" disabled={recording} onClick={() => setEmojiOpen((value) => !value)} aria-label="Emoji"><Smile size={20} /></IonButton>
           <IonButton fill="clear" disabled={recording} onClick={() => fileRef.current?.click()} aria-label="Attach file"><Paperclip size={20} /></IonButton>
-          <IonTextarea autoGrow rows={1} placeholder={recording ? 'Recording…' : 'Message'} value={text} disabled={recording} onIonInput={(event) => setText(event.detail.value || '')} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent?.isComposing) { event.preventDefault(); onSend(); } }} />
+          <IonTextarea autoGrow rows={1} placeholder={recording ? 'Recording…' : 'Message'} value={text} disabled={recording} onPaste={paste} onIonInput={(event) => setText(event.detail.value || '')} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent?.isComposing) { event.preventDefault(); onSend(); } }} />
           <IonButton fill={recording ? 'solid' : 'clear'} color={recording ? 'danger' : 'primary'} onClick={recording ? onStopVoice : onStartVoice} aria-label={recording ? 'Stop recording' : 'Record voice'}>{recording ? <Square size={18} /> : <Mic size={20} />}</IonButton>
           <IonButton onClick={onSend} disabled={!text.trim() || recording} aria-label="Send message"><Send size={18} /></IonButton>
           <EmojiPicker open={emojiOpen} onClose={() => setEmojiOpen(false)} onPick={(emoji) => { setText(`${text}${emoji}`); }} />
