@@ -36,16 +36,51 @@ function chatSubtitle(chat) {
   return formatLastSeen(chat.peer?.lastSeenAt);
 }
 
-function pastedImageFile(event) {
-  const clipboard = event.clipboardData || event.nativeEvent?.clipboardData;
-  if (!clipboard) return null;
-  const item = Array.from(clipboard.items || []).find((entry) => entry.kind === 'file' && entry.type?.startsWith('image/'));
-  const file = item?.getAsFile?.() || Array.from(clipboard.files || []).find((entry) => entry.type?.startsWith('image/'));
-  if (!file) return null;
-  if (file.name) return file;
+function normalizeClipboardImage(file) {
+  if (!file || !String(file.type || '').startsWith('image/')) return null;
+  if (file.name && !/^image\.(?:png|jpe?g|webp|gif|bmp)$/i.test(file.name)) return file;
   const subtype = String(file.type || 'image/png').split('/')[1]?.toLowerCase() || 'png';
   const extension = subtype === 'jpeg' ? 'jpg' : subtype.replace(/[^a-z0-9]/g, '') || 'png';
-  return new File([file], `pasted-image-${Date.now()}.${extension}`, { type: file.type || 'image/png' });
+  return new File([file], `pasted-image-${Date.now()}.${extension}`, {
+    type: file.type || 'image/png',
+    lastModified: Date.now(),
+  });
+}
+
+function pastedImageFile(event) {
+  const clipboard = event.clipboardData;
+  if (!clipboard) return null;
+
+  // Chrome/Edge screenshots and "Copy image" usually arrive here.
+  for (const file of Array.from(clipboard.files || [])) {
+    const normalized = normalizeClipboardImage(file);
+    if (normalized) return normalized;
+  }
+
+  // Firefox/WebKit may expose the image only as a DataTransferItem.
+  for (const item of Array.from(clipboard.items || [])) {
+    if (item.kind !== 'file' || !String(item.type || '').startsWith('image/')) continue;
+    const normalized = normalizeClipboardImage(item.getAsFile?.());
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
+
+async function readImageFromClipboardApi() {
+  if (!navigator.clipboard?.read) return null;
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const imageType = item.types?.find((type) => String(type).startsWith('image/'));
+      if (!imageType) continue;
+      const blob = await item.getType(imageType);
+      return normalizeClipboardImage(new File([blob], 'image.png', { type: imageType }));
+    }
+  } catch {
+    // Browser permission/policy may intentionally block async clipboard reads.
+  }
+  return null;
 }
 
 export const ChatRoom = memo(function ChatRoom({
@@ -57,6 +92,7 @@ export const ChatRoom = memo(function ChatRoom({
   const contentRef = useRef(null);
   const scrollElementRef = useRef(null);
   const fileRef = useRef(null);
+  const textareaRef = useRef(null);
   const touchStart = useRef(null);
   const dragDepth = useRef(0);
   const previousChatId = useRef(null);
@@ -90,6 +126,53 @@ export const ChatRoom = memo(function ChatRoom({
     return () => window.removeEventListener('keydown', onKey);
   }, [pendingFile, emojiOpen]);
 
+  // Ionic renders the actual textarea inside its shadow tree. React's onPaste on
+  // <IonTextarea> is not reliable for clipboard File items in all browsers, so
+  // bind directly to the native textarea returned by getInputElement().
+  useEffect(() => {
+    if (!chat?.id || chat.type === 'rss') return undefined;
+    let cancelled = false;
+    let nativeTextarea = null;
+
+    const handleNativePaste = (event) => {
+      if (recording) return;
+      const file = pastedImageFile(event);
+      if (file) {
+        event.preventDefault();
+        event.stopPropagation();
+        setEmojiOpen(false);
+        setPendingFile(file);
+        return;
+      }
+
+      // Keep normal text paste untouched. If there is no text/file payload,
+      // attempt the modern Clipboard API as a fallback for browser-specific
+      // image clipboard formats.
+      const plainText = event.clipboardData?.getData?.('text/plain') || '';
+      if (plainText) return;
+      readImageFromClipboardApi().then((fallbackFile) => {
+        if (!cancelled && fallbackFile) {
+          setEmojiOpen(false);
+          setPendingFile(fallbackFile);
+        }
+      });
+    };
+
+    const host = textareaRef.current;
+    Promise.resolve(host?.getInputElement?.())
+      .then((element) => {
+        if (cancelled || !element) return;
+        nativeTextarea = element;
+        nativeTextarea.addEventListener('paste', handleNativePaste, true);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+      nativeTextarea?.removeEventListener('paste', handleNativePaste, true);
+    };
+  }, [chat?.id, chat?.type, recording]);
+
   if (!chat) {
     return <IonPage className="empty-chat"><IonContent className="ion-padding"><div className="empty-state"><img src="/icon.svg" alt="" /><h2>Welcome to Tiny Chat</h2><p>Small but powerful real-time messaging.</p><div className="tiny-empty-actions"><button type="button" onClick={onNewChat}>New Chat</button><button type="button" onClick={onOpenRss}>Open RSS</button></div><small>Press Ctrl / Cmd + K to search your chats</small></div></IonContent></IonPage>;
   }
@@ -115,15 +198,6 @@ export const ChatRoom = memo(function ChatRoom({
     setDragging(false);
     const file = event.dataTransfer?.files?.[0];
     if (file) setPendingFile(file);
-  }
-
-  function paste(event) {
-    if (recording) return;
-    const file = pastedImageFile(event);
-    if (!file) return;
-    event.preventDefault();
-    setEmojiOpen(false);
-    setPendingFile(file);
   }
 
   async function sendPendingFile() {
@@ -160,7 +234,7 @@ export const ChatRoom = memo(function ChatRoom({
         <div className="composer-bar">
           <IonButton fill="clear" disabled={recording} onClick={() => setEmojiOpen((value) => !value)} aria-label="Emoji"><Smile size={20} /></IonButton>
           <IonButton fill="clear" disabled={recording} onClick={() => fileRef.current?.click()} aria-label="Attach file"><Paperclip size={20} /></IonButton>
-          <IonTextarea autoGrow rows={1} placeholder={recording ? 'Recording…' : 'Message'} value={text} disabled={recording} onPaste={paste} onIonInput={(event) => setText(event.detail.value || '')} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent?.isComposing) { event.preventDefault(); onSend(); } }} />
+          <IonTextarea ref={textareaRef} autoGrow rows={1} placeholder={recording ? 'Recording…' : 'Message'} value={text} disabled={recording} onIonInput={(event) => setText(event.detail.value || '')} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent?.isComposing) { event.preventDefault(); onSend(); } }} />
           <IonButton fill={recording ? 'solid' : 'clear'} color={recording ? 'danger' : 'primary'} onClick={recording ? onStopVoice : onStartVoice} aria-label={recording ? 'Stop recording' : 'Record voice'}>{recording ? <Square size={18} /> : <Mic size={20} />}</IonButton>
           <IonButton onClick={onSend} disabled={!text.trim() || recording} aria-label="Send message"><Send size={18} /></IonButton>
           <EmojiPicker open={emojiOpen} onClose={() => setEmojiOpen(false)} onPick={(emoji) => { setText(`${text}${emoji}`); }} />
