@@ -5,7 +5,6 @@ import { formatTime } from '../lib/chat';
 import { MessageStatus } from './MessageStatus';
 import { AudioMessage } from './AudioMessage';
 
-
 async function downloadFile(event, message, url) {
   event.preventDefault();
   event.stopPropagation();
@@ -33,9 +32,16 @@ function shouldIgnoreAction(target) {
   return Boolean(target.closest('audio,video,a,button,input'));
 }
 
+function liveFileUrl(message) {
+  if (message.fileUrl) return message.fileUrl;
+  if (!message.filePath) return null;
+  const fileName = String(message.filePath).split(/[\\/]/).pop();
+  return fileName ? `/uploads/${fileName}` : null;
+}
+
 export const MessageBubble = memo(function MessageBubble({ message, me, onAction, onSwipeReply, onOpenMedia }) {
   const mine = Number(message.senderId) === Number(me.id);
-  const url = assetUrl(message.fileUrl);
+  const url = assetUrl(liveFileUrl(message));
   const isImage = message.mimeType?.startsWith('image/');
   const isVideo = message.mimeType?.startsWith('video/');
   const isAudio = message.mimeType?.startsWith('audio/') || message.type === 'voice';
