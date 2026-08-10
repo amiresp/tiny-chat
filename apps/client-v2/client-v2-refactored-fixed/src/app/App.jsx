@@ -3,6 +3,7 @@ import { IonActionSheet, IonApp, IonFab, IonFabButton, IonLoading, IonToast } fr
 import { Plus } from 'lucide-react';
 import { api, getToken, setToken } from '../api';
 import { useTheme } from '../hooks/useTheme';
+import { useActiveChatReadState } from '../hooks/useActiveChatReadState';
 import { useChatController } from './useChatController';
 import { AuthPage } from '../components/AuthPage';
 import { ChatList } from '../components/ChatList';
@@ -36,7 +37,19 @@ export function App() {
   const [messageAction, setMessageAction] = useState(null);
 
   const chat = useChatController(user);
-  useBrowserAttention(chat.chats);
+  const activeChat = useMemo(() => {
+    if (!chat.active) return null;
+    const fresh = chat.chats.find((item) => Number(item.id) === Number(chat.active.id));
+    return fresh ? { ...chat.active, ...fresh, peer: fresh.peer || chat.active.peer } : chat.active;
+  }, [chat.active, chat.chats]);
+  const displayChats = useMemo(() => chat.chats.map((item) => (
+    activeChat && Number(item.id) === Number(activeChat.id)
+      ? { ...item, unreadCount: 0 }
+      : item
+  )), [chat.chats, activeChat?.id]);
+
+  useActiveChatReadState(activeChat, chat.messages);
+  useBrowserAttention(chat.chats, activeChat?.id);
 
   const setViewInUrl = useCallback((view) => {
     const url = new URL(location.href);
@@ -142,7 +155,7 @@ export function App() {
     }
   }, [chat.chats, chat.showHidden, chat.loadChats, chat.setActive, chat.setFilter, chat.setTypeFilter, setViewInUrl]);
 
-  const navigationActive = settingsOpen ? 'settings' : contactsOpen ? 'contacts' : chat.typeFilter === 'rss' ? 'rss' : chat.active?.type === 'saved' ? 'saved' : 'chats';
+  const navigationActive = settingsOpen ? 'settings' : contactsOpen ? 'contacts' : chat.typeFilter === 'rss' ? 'rss' : activeChat?.type === 'saved' ? 'saved' : 'chats';
 
   const actionButtons = useMemo(() => {
     const mineText = messageAction?.body && Number(messageAction?.senderId) === Number(user?.id) && !messageAction?.deletedAt;
@@ -162,11 +175,11 @@ export function App() {
   if (!user) return <IonApp><AuthPage onDone={setUser} themeMode={themeMode} onThemeModeChange={setThemeMode} /></IonApp>;
 
   return <IonApp>
-    <div className={`desktop-shell ${chat.active ? 'has-active-chat' : 'no-active-chat'}`}>
+    <div className={`desktop-shell ${activeChat ? 'has-active-chat' : 'no-active-chat'}`}>
       <NavigationRail active={navigationActive} onAction={navigationAction} />
       <ChatList
-        chats={chat.chats}
-        activeId={chat.active?.id}
+        chats={displayChats}
+        activeId={activeChat?.id}
         query={chat.query}
         setQuery={chat.setQuery}
         filter={chat.filter}
@@ -184,7 +197,7 @@ export function App() {
       <div id="main" className="main-pane">
         <ChatRoom
           user={user}
-          chat={chat.active}
+          chat={activeChat}
           messages={chat.messages}
           loading={chat.loading}
           text={chat.text}
@@ -193,7 +206,7 @@ export function App() {
           onCancelReply={() => chat.setReplyTo(null)}
           onSend={chat.send}
           onBack={() => chat.setActive(null)}
-          onRefresh={() => chat.active && chat.loadChat(chat.active)}
+          onRefresh={() => activeChat && chat.loadChat(activeChat)}
           onFile={chat.uploadFile}
           onInfo={() => { setInfoOpen(true); setViewInUrl('profile'); }}
           onSearch={() => setSearchOpen(true)}
@@ -217,15 +230,15 @@ export function App() {
       </div>
     </div>
 
-    {!chat.active && <IonFab vertical="bottom" horizontal="end" slot="fixed"><IonFabButton onClick={() => setNewChatOpen(true)}><Plus size={22} /></IonFabButton></IonFab>}
+    {!activeChat && <IonFab vertical="bottom" horizontal="end" slot="fixed"><IonFabButton onClick={() => setNewChatOpen(true)}><Plus size={22} /></IonFabButton></IonFab>}
 
     <NewChatModal open={newChatOpen} onClose={() => setNewChatOpen(false)} onCreated={async (created) => { setNewChatOpen(false); const next = await chat.loadChats({ includeHidden: chat.showHidden, quiet: true }).catch(() => []); const target = next.find((item) => Number(item.id) === Number(created?.id)) || created; if (target?.id) chat.setActive(target); }} />
-    <SearchModal open={searchOpen} chat={chat.active} onClose={() => setSearchOpen(false)} onJump={(message) => window.setTimeout(() => document.querySelector(`[data-message-id="${message.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)} />
+    <SearchModal open={searchOpen} chat={activeChat} onClose={() => setSearchOpen(false)} onJump={(message) => window.setTimeout(() => document.querySelector(`[data-message-id="${message.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)} />
     <FilesModal open={filesOpen} messages={chat.messages} initialPreview={mediaPreviewMessage} onClose={() => { setFilesOpen(false); setMediaPreviewMessage(null); }} />
-    <ForwardModal open={forwardOpen} chats={chat.chats} activeId={chat.active?.id} onClose={() => { setForwardOpen(false); setForwardMessage(null); }} onForward={async (target) => { const message = forwardMessage; setForwardOpen(false); setForwardMessage(null); await chat.forwardMessageToChat(message, target); }} />
-    <ChatInfoModal open={infoOpen} chat={chat.active} info={chat.chatInfo} user={user} onClose={() => { setInfoOpen(false); setViewInUrl(chat.active ? 'chat' : 'chats'); }} onCreateInvite={chat.createInvite} onPreference={chat.updatePreference} onBlockPeer={async (id) => { await chat.blockPeer(id); setInfoOpen(false); }} onToggleHidden={async () => { setInfoOpen(false); await chat.toggleHidden(); }} onDelete={async () => { setInfoOpen(false); await chat.deleteActiveChat(); }} />
-    <SettingsModal open={settingsOpen} user={user} onClose={() => { setSettingsOpen(false); setViewInUrl(chat.active ? 'chat' : 'chats'); }} onLogout={logout} onUserUpdate={setUser} themeMode={themeMode} onThemeModeChange={setThemeMode} />
-    <ContactsModal open={contactsOpen} onClose={() => { setContactsOpen(false); setViewInUrl(chat.active ? 'chat' : 'chats'); }} onOpenChat={async (created) => { const next = await chat.loadChats({ includeHidden: chat.showHidden, quiet: true }).catch(() => []); const target = next.find((item) => Number(item.id) === Number(created?.id)) || created; if (target?.id) chat.setActive(target); }} />
+    <ForwardModal open={forwardOpen} chats={chat.chats} activeId={activeChat?.id} onClose={() => { setForwardOpen(false); setForwardMessage(null); }} onForward={async (target) => { const message = forwardMessage; setForwardOpen(false); setForwardMessage(null); await chat.forwardMessageToChat(message, target); }} />
+    <ChatInfoModal open={infoOpen} chat={activeChat} info={chat.chatInfo} user={user} onClose={() => { setInfoOpen(false); setViewInUrl(activeChat ? 'chat' : 'chats'); }} onCreateInvite={chat.createInvite} onPreference={chat.updatePreference} onBlockPeer={async (id) => { await chat.blockPeer(id); setInfoOpen(false); }} onToggleHidden={async () => { setInfoOpen(false); await chat.toggleHidden(); }} onDelete={async () => { setInfoOpen(false); await chat.deleteActiveChat(); }} />
+    <SettingsModal open={settingsOpen} user={user} onClose={() => { setSettingsOpen(false); setViewInUrl(activeChat ? 'chat' : 'chats'); }} onLogout={logout} onUserUpdate={setUser} themeMode={themeMode} onThemeModeChange={setThemeMode} />
+    <ContactsModal open={contactsOpen} onClose={() => { setContactsOpen(false); setViewInUrl(activeChat ? 'chat' : 'chats'); }} onOpenChat={async (created) => { const next = await chat.loadChats({ includeHidden: chat.showHidden, quiet: true }).catch(() => []); const target = next.find((item) => Number(item.id) === Number(created?.id)) || created; if (target?.id) chat.setActive(target); }} />
     <ShortcutHelp open={shortcutHelpOpen} onClose={() => setShortcutHelpOpen(false)} />
     <PwaInstallPrompt />
 
