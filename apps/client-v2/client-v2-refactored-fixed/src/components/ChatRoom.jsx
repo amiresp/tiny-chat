@@ -3,7 +3,7 @@ import {
   IonAlert, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonProgressBar,
   IonRefresher, IonRefresherContent, IonPage, IonTextarea, IonToolbar,
 } from '../ui/primitives';
-import { ChevronLeft, FileText, Image, Mic, MoreVertical, Paperclip, Pin, Reply, Search, Send, Smile, Square, X } from 'lucide-react';
+import { ChevronLeft, FileText, Image, Keyboard, MessageCircleMore, Mic, MoreVertical, Paperclip, Pin, Plus, Reply, Rss, Search, Send, ShieldCheck, Smile, Square, X } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
@@ -184,7 +184,26 @@ export const ChatRoom = memo(function ChatRoom({
   }, [chat?.id, chat?.type, recording]);
 
   if (!chat) {
-    return <IonPage className="empty-chat"><IonContent className="ion-padding"><div className="empty-state"><img src="/icon.svg" alt="" /><h2>Welcome to Tiny Chat</h2><p>Small but powerful real-time messaging.</p><div className="tiny-empty-actions"><button type="button" onClick={onNewChat}>New Chat</button><button type="button" onClick={onOpenRss}>Open RSS</button></div><small>Press Ctrl / Cmd + K to search your chats</small></div></IonContent></IonPage>;
+    return <IonPage className="empty-chat">
+      <IonContent className="welcome-content">
+        <div className="welcome-shell">
+          <div className="welcome-mark"><MessageCircleMore size={34} /></div>
+          <div className="welcome-copy">
+            <span className="welcome-kicker">TINY CHAT</span>
+            <h2>Your conversations,<br/><span>ready when you are.</span></h2>
+            <p>Select a conversation from the sidebar, or start something new. Tiny Chat keeps messaging fast, focused and private.</p>
+          </div>
+          <div className="welcome-actions">
+            <button type="button" className="welcome-primary" onClick={onNewChat}><Plus size={18}/><span>Start a new chat</span></button>
+            <button type="button" className="welcome-secondary" onClick={onOpenRss}><Rss size={18}/><span>Open RSS feeds</span></button>
+          </div>
+          <div className="welcome-meta">
+            <span><ShieldCheck size={16}/> Private by design</span>
+            <span><Keyboard size={16}/> <kbd>Ctrl</kbd><b>+</b><kbd>K</kbd> to search</span>
+          </div>
+        </div>
+      </IonContent>
+    </IonPage>;
   }
 
   function startSwipe(event) {
