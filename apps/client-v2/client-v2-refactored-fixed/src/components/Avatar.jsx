@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { IonAvatar } from '@ionic/react';
+import { IonAvatar } from '../ui/primitives';
 import { assetUrl } from '../api';
 import { initials, titleOf } from '../lib/chat';
 
