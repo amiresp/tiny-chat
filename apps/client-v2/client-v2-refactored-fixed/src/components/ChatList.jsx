@@ -2,9 +2,9 @@ import React, { memo, useMemo } from 'react';
 import {
   IonBadge, IonButton, IonButtons, IonContent, IonHeader, IonItem, IonItemOption,
   IonItemOptions, IonItemSliding, IonLabel, IonList, IonPage, IonRefresher,
-  IonRefresherContent, IonSearchbar, IonSegment, IonSegmentButton, IonTitle, IonToolbar,
+  IonRefresherContent, IonSearchbar, IonTitle, IonToolbar,
 } from '@ionic/react';
-import { Archive, BellOff, EyeOff, Menu, Pin, Plus, Settings } from 'lucide-react';
+import { Archive, BellOff, EyeOff, Menu, Pin, Plus } from 'lucide-react';
 import { Avatar } from './Avatar';
 
 function formatChatTime(value) {
