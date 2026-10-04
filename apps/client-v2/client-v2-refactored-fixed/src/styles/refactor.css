@@ -254,3 +254,29 @@ body{background:#0b141e;display:flex;justify-content:center;align-items:center;m
 .list-empty{padding:32px 16px;color:#7d8e9e;text-align:center}
 @media(max-width:768px){body{padding:0}.ui-app{display:block}.app-container{height:100vh;max-height:none;border-radius:0;border:0;max-width:100%}.chat-list-panel{width:100%;min-width:0;border:0}.main-pane{display:none;width:100%}.app-container.show-chat .chat-list-panel{display:none}.app-container.show-chat .main-pane{display:flex}.desktop-hidden.back-arrow{display:flex!important}.message-line{max-width:88%}.composer-paste-action{display:none!important}}
 @media(max-width:380px){.chat-avatar,.vc-avatar{width:46px;height:46px;font-size:1.1rem}.room-title .chat-avatar{width:38px;height:38px}.message-bubble{font-size:.85rem}}
+
+
+/* === Full viewport application shell === */
+html,body,#root,.ui-app{width:100%;height:100%;min-width:0;min-height:0}
+html,body{overflow:hidden}
+body{padding:0!important;margin:0!important;display:block!important;background:#0b141e}
+.ui-app{display:block!important;width:100vw!important;height:100dvh!important;min-height:100vh!important}
+.app-container{
+  width:100vw!important;
+  max-width:none!important;
+  height:100dvh!important;
+  min-height:100vh!important;
+  max-height:none!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.chat-list-panel{height:100%;width:340px;min-width:340px}
+.main-pane,.chat-room-page,.empty-chat{height:100%;min-height:0}
+.chat-room-page{width:100%}
+.messages-content{min-height:0}
+@media(max-width:768px){
+  .app-container{width:100%!important;height:100dvh!important}
+  .chat-list-panel{width:100%;min-width:0}
+}
