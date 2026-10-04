@@ -172,7 +172,7 @@ export function App() {
   if (!user) return <IonApp><AuthPage onDone={setUser} themeMode={themeMode} onThemeModeChange={setThemeMode} /></IonApp>;
 
   return <IonApp>
-    <div className={`app-container ${activeChat ? 'show-chat' : ''}`}>
+    <div className={`app reference-app ${activeChat ? 'show-chat' : ''}`}>
       <ChatList
         chats={displayChats}
         activeId={activeChat?.id}
