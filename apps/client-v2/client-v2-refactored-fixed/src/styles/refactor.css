@@ -408,3 +408,65 @@ body{display:flex;align-items:center;justify-content:center;padding:8px;color:va
 .settings-modal .settings-item .si-arrow{margin-left:2px!important}
 .settings-modal .toggle::after{left:2px!important;right:auto!important}
 .settings-modal .toggle.on::after{left:20px!important;right:auto!important}
+
+
+/* === Complete light palette for the reference UI === */
+html[data-theme='light']{
+  --bg-main:#e9eef3;
+  --bg-panel:#ffffff;
+  --bg-hover:#f1f4f7;
+  --bg-input:#f0f3f6;
+  --bg-msg-in:#ffffff;
+  --bg-msg-out:#d9eaf7;
+  --bg-active:#e7f1f8;
+  --bg-modal:#ffffff;
+  --border:#dce3e9;
+  --border-light:#cfd8e1;
+  --text-main:#17212b;
+  --text-secondary:#667786;
+  --text-muted:#8b9aa7;
+  --accent:#4f8fc0;
+  --accent-hover:#3f7faa;
+  --online:#35a853;
+  --danger:#d94b45;
+  color-scheme:light;
+}
+html[data-theme='light'] body,
+html[data-theme='light'] #root,
+html[data-theme='light'] .ui-app,
+html[data-theme='light'] .reference-app{background:var(--bg-main);color:var(--text-main)}
+html[data-theme='light'] .reference-app{box-shadow:none}
+html[data-theme='light'] .reference-app .chat-list-panel,
+html[data-theme='light'] .reference-app .chat-room-page>.ui-header,
+html[data-theme='light'] .reference-app .chat-room-page>.ui-header .ui-toolbar,
+html[data-theme='light'] .reference-app .composer-footer{background:var(--bg-panel)!important}
+html[data-theme='light'] .reference-app .main-pane,
+html[data-theme='light'] .reference-app .chat-room-page,
+html[data-theme='light'] .reference-app .messages-content{background:var(--bg-main)!important}
+html[data-theme='light'] .reference-app .chat-item.active{background:var(--bg-active)!important}
+html[data-theme='light'] .reference-app .chat-item:hover,
+html[data-theme='light'] .reference-app .menu-btn:hover,
+html[data-theme='light'] .reference-app .room-actions .ui-button:hover,
+html[data-theme='light'] .reference-app .back-arrow:hover{background:var(--bg-hover)!important}
+html[data-theme='light'] .reference-app .message-bubble{box-shadow:0 1px 2px rgba(20,40,60,.12)!important}
+html[data-theme='light'] .reference-app .message-bubble.mine{background:var(--bg-msg-out)!important;color:var(--text-main)!important}
+html[data-theme='light'] .reference-app .message-bubble.mine time{color:var(--text-secondary)!important}
+html[data-theme='light'] .reference-app .reply-chip{background:rgba(79,143,192,.10)!important}
+html[data-theme='light'] .reference-app .message-media{background:#dfe6ec}
+html[data-theme='light'] .ui-overlay{background:rgba(31,45,58,.32)!important}
+html[data-theme='light'] .ui-modal,
+html[data-theme='light'] .settings-modal .ui-header,
+html[data-theme='light'] .settings-modal .settings-content,
+html[data-theme='light'] .settings-modal .settings-reference{background:var(--bg-modal)!important;color:var(--text-main)}
+html[data-theme='light'] .settings-modal .settings-section{border-bottom-color:var(--bg-main)}
+html[data-theme='light'] .settings-modal .settings-item:hover,
+html[data-theme='light'] .settings-modal .settings-profile:hover{background:var(--bg-hover)!important}
+html[data-theme='light'] .settings-modal .settings-detail-card{background:var(--bg-panel)!important}
+html[data-theme='light'] .settings-detail-card .ui-field input,
+html[data-theme='light'] .settings-detail-card .ui-field select,
+html[data-theme='light'] .settings-theme-options button,
+html[data-theme='light'] .settings-modal .theme-preview{background:var(--bg-input)!important;color:var(--text-main)!important;border-color:var(--border-light)!important}
+html[data-theme='light'] .settings-theme-options button.active{background:#e5f0f8!important;border-color:var(--accent)!important;color:var(--text-main)!important}
+html[data-theme='light'] .settings-modal .toggle{background:#b9c5cf}
+html[data-theme='light'] .settings-modal .toggle.on{background:var(--accent)}
+html[data-theme='light'] .file-drop-overlay{background:rgba(233,238,243,.9)!important;color:var(--text-main)!important}
