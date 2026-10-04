@@ -280,3 +280,44 @@ body{padding:0!important;margin:0!important;display:block!important;background:#
   .app-container{width:100%!important;height:100dvh!important}
   .chat-list-panel{width:100%;min-width:0}
 }
+
+
+/* === Reference settings surface === */
+.settings-modal .ui-modal{width:min(100%,520px);height:min(88vh,760px);border-radius:18px;overflow:hidden;background:#17212b;border:1px solid #263646;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.settings-modal .ui-header{background:#17212b;border-bottom:1px solid #0b141e}
+.settings-modal .settings-topbar{min-height:58px;padding:8px 10px;background:#17212b}
+.settings-modal .ui-title{font-size:17px;font-weight:700;color:#e9edf0}
+.settings-modal .ui-button{color:#8fa1b2}
+.settings-content{padding:0!important;background:#0b141e!important;color:#e9edf0}
+.settings-reference{min-height:100%;padding:16px;background:#0b141e}
+.settings-profile-card{display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:14px;background:#17212b;border-radius:14px}
+.settings-profile-card .vc-avatar{width:58px;height:58px}
+.settings-profile-card>div{min-width:0;display:flex;flex-direction:column;gap:3px}
+.settings-profile-card b{font-size:16px;color:#e9edf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.settings-profile-card span,.settings-profile-card small{font-size:12px;color:#7d8e9e}
+.settings-reference-list{overflow:hidden;background:#17212b;border-radius:14px}
+.settings-reference-row{width:100%;min-height:64px;display:flex;align-items:center;gap:12px;padding:10px 14px;border:0;border-bottom:1px solid #21303d;background:transparent;color:#e9edf0;text-align:left;cursor:pointer}
+.settings-reference-row:last-child{border-bottom:0}
+.settings-reference-row:hover{background:#1d2a36}
+.settings-reference-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:#21364a;color:#75a7d6;flex:none}
+.settings-reference-copy{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.settings-reference-copy b{font-size:14px;font-weight:600}
+.settings-reference-copy small{font-size:11px;color:#7d8e9e}
+.settings-reference-value{font-size:11px;color:#7d8e9e}
+.settings-reference-chevron{color:#536575;flex:none}
+.settings-signout{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;padding:12px;border:0;border-radius:12px;background:#17212b;color:#e26b6b;font-weight:700;cursor:pointer}
+.settings-back{font-size:30px!important;line-height:1!important}
+.settings-detail-card{margin:16px!important;padding:16px!important;background:#17212b!important;border:0!important;border-radius:14px!important}
+.settings-detail-card h2{display:flex;align-items:center;gap:8px;margin:0 0 14px;font-size:16px;color:#e9edf0}
+.settings-detail-avatar{display:flex;justify-content:center;margin:2px 0 14px}
+.settings-detail-avatar .vc-avatar{width:70px;height:70px}
+.settings-detail-card .ui-field{display:flex;flex-direction:column;gap:7px;margin:0 0 12px;color:#9bacbb;font-size:12px}
+.settings-detail-card .ui-field input,.settings-detail-card .ui-field select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #293a49;border-radius:10px;outline:0;background:#0e1621;color:#e9edf0}
+.settings-detail-card .ui-toggle{min-height:50px;margin:4px 0 12px;padding:0 2px;color:#e9edf0}
+.settings-detail-card>.ui-button.ui-button-block{width:100%;min-height:44px;margin-top:8px;border-radius:10px;background:#2b5278;color:#fff}
+.settings-theme-options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.settings-theme-options button{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 8px;border:1px solid #293a49;border-radius:12px;background:#0e1621;color:#9bacbb;cursor:pointer}
+.settings-theme-options button.active{border-color:#4f86b7;background:#20384f;color:#e9edf0}
+.settings-modal .theme-preview{border-color:#293a49;background:#0e1621}
+.settings-modal .admin-panel{color:#e9edf0}
+@media(max-width:600px){.settings-modal .ui-modal{width:100%;height:100dvh;max-height:none;border:0;border-radius:0}.settings-reference{padding:12px}.settings-detail-card{margin:12px!important}.settings-reference-row{min-height:62px}}
