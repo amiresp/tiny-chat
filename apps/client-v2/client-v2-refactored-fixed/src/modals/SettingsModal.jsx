@@ -3,7 +3,7 @@ import {
   IonAlert, IonButton, IonButtons, IonContent, IonHeader, IonInput, IonItem, IonLabel,
   IonList, IonModal, IonSearchbar, IonSegment, IonSegmentButton, IonSelect,
   IonSelectOption, IonTitle, IonToast, IonToggle, IonToolbar,
-} from '@ionic/react';
+} from '../ui/primitives';
 import { Lock, LogOut, Moon, Shield, Sun, Trash2, X } from 'lucide-react';
 import { api } from '../api';
 import { Avatar } from '../components/Avatar';
