@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { Menu, Search } from 'lucide-react';
+import { MessageCircleMore, Menu, Plus, Search } from 'lucide-react';
 import { Avatar } from './Avatar';
 
 function formatChatTime(value) {
@@ -23,7 +23,7 @@ function preview(chat) {
 }
 
 export const ChatList = memo(function ChatList({
-  chats, activeId, query, setQuery, showHidden, onOpen, onSettings,
+  chats, activeId, query, setQuery, showHidden, onOpen, onSettings, onNew,
 }) {
   const q = query.trim().toLowerCase();
   const list = useMemo(() => chats.filter((chat) => {
@@ -46,7 +46,7 @@ export const ChatList = memo(function ChatList({
           <div className="chat-item-bottom"><span className="chat-item-msg">{preview(chat)}</span>{Number(chat.unreadCount||0)>0&&<span className="unread-badge">{chat.unreadCount}</span>}</div>
         </div>
       </button>)}
-      {!list.length && <div className="list-empty">No chats</div>}
+      {!list.length && <div className="list-empty reference-list-empty"><span><MessageCircleMore size={25}/></span><b>{q ? 'No matching chats' : 'No conversations yet'}</b><small>{q ? 'Try another search.' : 'Start a conversation and it will appear here.'}</small>{!q && <button type="button" onClick={onNew}><Plus size={16}/>New chat</button>}</div>}
     </div>
   </aside>;
 });
