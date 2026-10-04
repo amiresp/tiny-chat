@@ -3,7 +3,7 @@ import {
   IonBadge, IonButton, IonButtons, IonContent, IonHeader, IonItem, IonItemOption,
   IonItemOptions, IonItemSliding, IonLabel, IonList, IonPage, IonRefresher,
   IonRefresherContent, IonSearchbar, IonTitle, IonToolbar,
-} from '@ionic/react';
+} from '../ui/primitives';
 import { Archive, BellOff, EyeOff, Menu, Pin, Plus } from 'lucide-react';
 import { Avatar } from './Avatar';
 
