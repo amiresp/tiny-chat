@@ -1,113 +1,52 @@
 import React, { memo, useMemo } from 'react';
-import {
-  IonBadge, IonButton, IonButtons, IonContent, IonHeader, IonItem, IonItemOption,
-  IonItemOptions, IonItemSliding, IonLabel, IonList, IonPage, IonRefresher,
-  IonRefresherContent, IonSearchbar, IonTitle, IonToolbar,
-} from '../ui/primitives';
-import { Archive, BellOff, EyeOff, Menu, Pin, Plus } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { Avatar } from './Avatar';
 
 function formatChatTime(value) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  const today = new Date();
-  if (date.toDateString() === today.toDateString()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if (today.getTime() - date.getTime() < 7 * 86400000) return date.toLocaleDateString([], { weekday: 'short' });
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (now.getTime() - date.getTime() < 7 * 86400000) return date.toLocaleDateString([], { weekday: 'short' });
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
-
-function formatLastSeen(value) {
-  if (!value) return 'direct message';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'direct message';
-  const now = new Date();
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if (date.toDateString() === now.toDateString()) return `last seen today at ${time}`;
-  if (date.toDateString() === yesterday.toDateString()) return `last seen yesterday at ${time}`;
-  return `last seen ${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${time}`;
-}
-
-function chatPreview(chat) {
+function preview(chat) {
   const body = String(chat.lastMessageBody || chat.lastMessage?.body || '').trim().replace(/\s+/g, ' ');
   if (body) return body;
   if (chat.lastMessage?.fileName || chat.lastMessageFileName) return chat.lastMessage?.fileName || chat.lastMessageFileName;
-  if (chat.type === 'direct') {
-    if (chat.peer?.hidePresence) return 'direct message';
-    return chat.peer?.isOnline ? 'online' : formatLastSeen(chat.peer?.lastSeenAt);
-  }
   if (chat.type === 'saved') return 'Private saved messages';
   if (chat.type === 'rss') return 'RSS channel';
-  return 'Group conversation';
-}
-
-function matchesFolder(chat, filter, showHidden) {
-  if (chat.hidden && !showHidden) return false;
-  if (filter === 'archived') return Boolean(chat.archived);
-  return !chat.archived;
-}
-
-function matchesType(chat, typeFilter) {
-  if (typeFilter === 'private') return ['direct', 'saved'].includes(chat.type);
-  if (typeFilter === 'groups') return chat.type === 'group';
-  if (typeFilter === 'rss') return chat.type === 'rss';
-  return true;
-}
-
-function ChatRow({ chat, active, onOpen, onArchive }) {
-  return (
-    <IonItemSliding className={chat.hidden ? 'tiny-hidden-chat' : ''}>
-      <IonItem button detail={false} className={active ? 'chat-row active' : 'chat-row'} onClick={() => onOpen(chat)}>
-        <Avatar entity={chat} icon={chat.type === 'saved' ? '★' : chat.type === 'group' ? 'G' : chat.type === 'rss' ? 'R' : undefined} />
-        <IonLabel>
-          <h2>{chat.title || `${chat.type} chat`}</h2>
-          <p>{chatPreview(chat)}</p>
-        </IonLabel>
-        <div className="chat-row-meta"><time>{formatChatTime(chat.lastMessageAt || chat.updatedAt)}</time><span>{chat.hidden && <EyeOff size={14} />}{chat.muted && <BellOff size={14} />}{chat.pinned && <Pin size={14} />}{Number(chat.unreadCount || 0) > 0 && <IonBadge color="primary">{chat.unreadCount}</IonBadge>}</span></div>
-      </IonItem>
-      {chat.type !== 'saved' && <IonItemOptions side="end">
-        <IonItemOption color="medium" onClick={() => onArchive(chat)}>{chat.archived ? 'Unarchive' : 'Archive'}</IonItemOption>
-      </IonItemOptions>}
-    </IonItemSliding>
-  );
+  if (chat.type === 'group') return 'Group conversation';
+  if (chat.peer?.isOnline) return 'online';
+  return 'direct message';
 }
 
 export const ChatList = memo(function ChatList({
-  chats, activeId, query, setQuery, filter, setFilter, typeFilter, setTypeFilter,
-  showHidden, onToggleHiddenReveal, onOpen, onNew, onRefresh, onSettings, onArchive,
+  chats, activeId, query, setQuery, showHidden, onOpen, onSettings,
 }) {
-  const normalizedQuery = query.trim().toLowerCase();
-  const list = useMemo(() => chats.filter((chat) => (
-    matchesFolder(chat, filter, showHidden)
-    && matchesType(chat, typeFilter)
-    && (!normalizedQuery || String(chat.title || '').toLowerCase().includes(normalizedQuery))
-  )), [chats, filter, typeFilter, showHidden, normalizedQuery]);
+  const q = query.trim().toLowerCase();
+  const list = useMemo(() => chats.filter((chat) => {
+    if (chat.hidden && !showHidden) return false;
+    if (!q) return true;
+    return String(chat.title || chat.peer?.displayName || chat.peer?.username || '').toLowerCase().includes(q)
+      || preview(chat).toLowerCase().includes(q);
+  }), [chats, showHidden, q]);
 
-  return (
-    <IonPage className={`chat-list-page ${showHidden ? 'tiny-show-hidden-chats' : ''}`}>
-      <IonHeader translucent>
-        <IonToolbar className="chat-list-toolbar">
-          <IonButtons slot="start"><IonButton onClick={onSettings} aria-label="Menu and settings"><Menu size={21} /></IonButton></IonButtons>
-          <IonTitle onClick={(event) => { if (event.detail >= 3) onToggleHiddenReveal(); }} title={showHidden ? 'Hidden chats are visible' : undefined}>Tiny Chat</IonTitle>
-          <IonButtons slot="end"><IonButton className="new-chat-top" onClick={onNew} aria-label="New chat"><Plus size={20} /></IonButton></IonButtons>
-        </IonToolbar>
-        <IonToolbar className="search-toolbar"><IonSearchbar debounce={180} value={query} placeholder="Search" onIonInput={(event) => setQuery(event.detail.value || '')} /></IonToolbar>
-        <IonToolbar className="folder-toolbar">
-          <div className="tiny-chat-filters" role="group" aria-label="Chat type">
-            {[['all','All'],['private','Private'],['groups','Groups'],['rss','RSS']].map(([value,label]) => <button type="button" key={value} className={typeFilter === value ? 'active' : ''} onClick={() => setTypeFilter(value)}>{label}</button>)}
-            <button type="button" className={filter === 'archived' ? 'active' : ''} onClick={() => setFilter(filter === 'archived' ? 'active' : 'archived')}><Archive size={13} />Archived</button>
-          </div>
-        </IonToolbar>
-      </IonHeader>
-      <IonContent>
-        <IonRefresher slot="fixed" onIonRefresh={async (event) => { try { await onRefresh(); } finally { event.detail.complete(); } }}><IonRefresherContent /></IonRefresher>
-        {showHidden && <div className="hidden-mode-note"><EyeOff size={14} />Hidden chats are temporarily visible</div>}
-        <IonList lines="none" className="chat-list">
-          {list.map((chat) => <ChatRow key={chat.id} chat={chat} active={Number(activeId) === Number(chat.id)} onOpen={onOpen} onArchive={onArchive} />)}
-          {!list.length && <div className="list-empty">No chats here.</div>}
-        </IonList>
-      </IonContent>
-    </IonPage>
-  );
+  return <aside className="chat-list-panel">
+    <div className="list-header">
+      <button type="button" className="menu-btn" onClick={onSettings} aria-label="Menu"><Menu size={21}/></button>
+      <div className="search-box"><Search size={16}/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search..." /></div>
+    </div>
+    <div className="chat-list">
+      {list.map((chat) => <button type="button" className={`chat-item ${Number(activeId)===Number(chat.id)?'active':''}`} key={chat.id} onClick={()=>onOpen(chat)}>
+        <Avatar entity={chat} icon={chat.type==='saved'?'★':chat.type==='group'?'G':chat.type==='rss'?'R':undefined} />
+        <div className="chat-item-content">
+          <div className="chat-item-top"><span className="chat-item-name">{chat.title || 'Chat'}</span><span className="chat-item-time">{formatChatTime(chat.lastMessageAt || chat.updatedAt)}</span></div>
+          <div className="chat-item-bottom"><span className="chat-item-msg">{preview(chat)}</span>{Number(chat.unreadCount||0)>0&&<span className="unread-badge">{chat.unreadCount}</span>}</div>
+        </div>
+      </button>)}
+      {!list.length && <div className="list-empty">No chats</div>}
+    </div>
+  </aside>;
 });
