@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IonButton, IonContent, IonInput, IonLoading, IonPage, IonToast } from '@ionic/react';
+import { IonButton, IonContent, IonInput, IonLoading, IonPage, IonToast } from '../ui/primitives';
 import { api, setToken } from '../api';
 
 export function AuthPage({ onDone, themeMode = 'system', onThemeModeChange }) {
