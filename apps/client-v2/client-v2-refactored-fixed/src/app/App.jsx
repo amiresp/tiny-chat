@@ -15,7 +15,6 @@ import { ForwardModal } from '../modals/ForwardModal';
 import { ChatInfoModal } from '../modals/ChatInfoModal';
 import { SettingsModal } from '../modals/SettingsModal';
 import { ContactsModal } from '../modals/ContactsModal';
-import { NavigationRail } from '../components/NavigationRail';
 import { ShortcutHelp } from '../components/ShortcutHelp';
 import { useBrowserAttention } from '../hooks/useBrowserAttention';
 import { PwaInstallPrompt } from '../components/PwaInstallPrompt';
@@ -77,7 +76,7 @@ export function App() {
     if (!user?.id) return undefined;
     const params = new URLSearchParams(location.search);
     if (params.get('action') === 'new-chat') setNewChatOpen(true);
-    if (params.get('action') === 'search') window.setTimeout(() => document.querySelector('.chat-list-page ion-searchbar')?.setFocus?.(), 250);
+    if (params.get('action') === 'search') window.setTimeout(() => document.querySelector('.chat-list-page .ui-search input')?.focus(), 250);
     if (params.get('view') === 'contacts') setContactsOpen(true);
     if (params.get('view') === 'settings') setSettingsOpen(true);
     if (params.get('view') === 'profile') setInfoOpen(true);
@@ -92,7 +91,7 @@ export function App() {
       }
       if (event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        document.querySelector('.chat-list-page ion-searchbar')?.setFocus?.();
+        document.querySelector('.chat-list-page .ui-search input')?.focus();
       }
       if (event.key === '/' || event.key === '?') {
         event.preventDefault();
@@ -155,8 +154,6 @@ export function App() {
     }
   }, [chat.chats, chat.showHidden, chat.loadChats, chat.setActive, chat.setFilter, chat.setTypeFilter, setViewInUrl]);
 
-  const navigationActive = settingsOpen ? 'settings' : contactsOpen ? 'contacts' : chat.typeFilter === 'rss' ? 'rss' : activeChat?.type === 'saved' ? 'saved' : 'chats';
-
   const actionButtons = useMemo(() => {
     const mineText = messageAction?.body && Number(messageAction?.senderId) === Number(user?.id) && !messageAction?.deletedAt;
     return [
@@ -176,7 +173,6 @@ export function App() {
 
   return <IonApp>
     <div className={`desktop-shell ${activeChat ? 'has-active-chat' : 'no-active-chat'}`}>
-      <NavigationRail active={navigationActive} onAction={navigationAction} />
       <ChatList
         chats={displayChats}
         activeId={activeChat?.id}
