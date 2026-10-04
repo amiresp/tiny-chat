@@ -3,7 +3,7 @@ import {
   IonAlert, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonProgressBar,
   IonRefresher, IonRefresherContent, IonPage, IonTextarea, IonToolbar,
 } from '@ionic/react';
-import { ChevronLeft, Image, Info, Mic, MoreVertical, Paperclip, Pin, Reply, Search, Send, Smile, Square, Trash2, X } from 'lucide-react';
+import { ChevronLeft, Image, Mic, MoreVertical, Paperclip, Pin, Reply, Search, Send, Smile, Square, X } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
