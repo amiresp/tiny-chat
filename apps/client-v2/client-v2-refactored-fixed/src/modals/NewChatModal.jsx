@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   IonButton, IonButtons, IonContent, IonHeader, IonInput, IonItem, IonLabel, IonList,
   IonModal, IonSearchbar, IonSegment, IonSegmentButton, IonTitle, IonToast, IonToolbar,
-} from '@ionic/react';
+} from '../ui/primitives';
 import { X } from 'lucide-react';
 import { api } from '../api';
 import { Avatar } from '../components/Avatar';
