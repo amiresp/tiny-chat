@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   IonAlert, IonButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel,
   IonList, IonModal, IonTitle, IonToast, IonToolbar,
-} from '@ionic/react';
+} from '../ui/primitives';
 import { Archive, Bell, BellOff, Eye, EyeOff, Pin, PinOff, Trash2, UserPlus, UserX, X } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 import { api } from '../api';
