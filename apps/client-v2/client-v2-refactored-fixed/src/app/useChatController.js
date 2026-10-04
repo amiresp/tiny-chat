@@ -131,7 +131,12 @@ export function useChatController(user) {
     try {
       const messagesRequest = chat.type === 'rss'
         ? api(`/api/chats/${chat.id}/messages`)
-        : api(`/api/v2/chats/${chat.id}/messages/page?limit=60`);
+        : api(`/api/v2/chats/${chat.id}/messages/page?limit=60`).catch((error) => {
+            // Keep compatibility with the original server route. Some deployed
+            // Tiny Chat servers do not expose the paginated v2 messages route.
+            if (error?.status === 404) return api(`/api/chats/${chat.id}/messages`);
+            throw error;
+          });
       const infoRequest = api(`/api/v2/chats/${chat.id}/info`).catch(() => null);
       const [messageData, infoData] = await Promise.all([messagesRequest, infoRequest]);
       if (generation !== chatLoadGeneration.current || Number(activeRef.current?.id) !== Number(chat.id)) return;
