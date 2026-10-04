@@ -2,7 +2,7 @@ import React, { memo, useEffect, useRef, useState } from 'react';
 import {
   IonAlert, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonProgressBar,
   IonRefresher, IonRefresherContent, IonPage, IonTextarea, IonToolbar,
-} from '@ionic/react';
+} from '../ui/primitives';
 import { ChevronLeft, Image, Mic, MoreVertical, Paperclip, Pin, Reply, Search, Send, Smile, Square, X } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { MessageBubble } from './MessageBubble';
