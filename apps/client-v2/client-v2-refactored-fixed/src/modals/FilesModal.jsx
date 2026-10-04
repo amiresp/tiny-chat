@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { IonButton, IonButtons, IonContent, IonHeader, IonModal, IonSegment, IonSegmentButton, IonTitle, IonToolbar } from '@ionic/react';
+import { IonButton, IonButtons, IonContent, IonHeader, IonModal, IonSegment, IonSegmentButton, IonTitle, IonToolbar } from '../ui/primitives';
 import { FileText, X } from 'lucide-react';
 import { assetUrl } from '../api';
 
