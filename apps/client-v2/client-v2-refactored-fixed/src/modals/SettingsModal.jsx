@@ -4,7 +4,7 @@ import {
   IonList, IonModal, IonSearchbar, IonSegment, IonSegmentButton, IonSelect,
   IonSelectOption, IonTitle, IonToast, IonToggle, IonToolbar,
 } from '../ui/primitives';
-import { ChevronRight, KeyRound, Lock, LogOut, Monitor, Moon, Palette, Shield, Smartphone, Sun, Trash2, UserRound, X } from 'lucide-react';
+import { AtSign, Bell, ChevronLeft, Edit3, Info, KeyRound, Languages, Lock, LogOut, Monitor, Moon, Palette, Phone, Shield, Smartphone, Sun, Trash2, Type, UserRound, X } from 'lucide-react';
 import { api } from '../api';
 import { Avatar } from '../components/Avatar';
 import { formatDate, isAdmin } from '../lib/chat';
@@ -86,20 +86,36 @@ export function SettingsModal({ open, user, onClose, onLogout, onUserUpdate, the
       </IonToolbar>
     </IonHeader>
     <IonContent className="settings-content">
-      {tab === 'home' && <div className="settings-reference">
-        <div className="settings-profile-card">
+      {tab === 'home' && <div className="settings-reference settings-body">
+        <button type="button" className="settings-profile" onClick={() => setTab('profile')}>
           <Avatar entity={user} />
-          <div><b>{user?.displayName || user?.username || 'Tiny Chat user'}</b><span>@{user?.username || 'user'}</span>{user?.mobile && <small>{user.mobile}</small>}</div>
+          <div className="sp-body"><h3>{user?.displayName || user?.username || 'کاربر Tiny Chat'}</h3><p>{user?.mobile || `@${user?.username || 'user'}`}</p></div>
+        </button>
+        <div className="settings-section">
+          <div className="settings-section-title">حساب کاربری</div>
+          <button type="button" className="settings-item" onClick={() => setTab('profile')}><Edit3 className="si-icon"/><div className="si-body"><div className="si-title">ویرایش پروفایل</div><div className="si-sub">نام، نام کاربری و وضعیت حضور</div></div><ChevronLeft className="si-arrow"/></button>
+          <div className="settings-item"><Phone className="si-icon"/><div className="si-body"><div className="si-title">شماره تلفن</div></div><span className="si-value">{user?.mobile || '—'}</span></div>
+          <div className="settings-item"><AtSign className="si-icon"/><div className="si-body"><div className="si-title">نام کاربری</div></div><span className="si-value">@{user?.username || '—'}</span></div>
         </div>
-        <div className="settings-reference-list">
-          {sections.map(([key, Icon, label, description]) => <button type="button" className="settings-reference-row" key={key} onClick={() => setTab(key)}>
-            <span className="settings-reference-icon"><Icon size={20} /></span>
-            <span className="settings-reference-copy"><b>{label}</b><small>{description}</small></span>
-            {key === 'appearance' && <span className="settings-reference-value">{themeMode === 'system' ? 'System' : themeMode === 'dark' ? 'Dark' : 'Light'}</span>}
-            <ChevronRight className="settings-reference-chevron" size={18} />
-          </button>)}
+        <div className="settings-section">
+          <div className="settings-section-title">تنظیمات</div>
+          <button type="button" className="settings-item" onClick={() => setTab('privacy')}><Lock className="si-icon"/><div className="si-body"><div className="si-title">حریم خصوصی و امنیت</div><div className="si-sub">آخرین بازدید و رسید خواندن</div></div><ChevronLeft className="si-arrow"/></button>
+          <button type="button" className="settings-item" onClick={() => setTab('security')}><KeyRound className="si-icon"/><div className="si-body"><div className="si-title">رمز عبور</div></div><ChevronLeft className="si-arrow"/></button>
+          <button type="button" className="settings-item" onClick={() => setTab('sessions')}><Smartphone className="si-icon"/><div className="si-body"><div className="si-title">نشست‌های فعال</div></div><ChevronLeft className="si-arrow"/></button>
+          <button type="button" className="settings-item" onClick={() => onThemeModeChange(themeMode === 'dark' ? 'light' : 'dark')}><Moon className="si-icon"/><div className="si-body"><div className="si-title">حالت تاریک</div></div><div className={`toggle ${themeMode === 'dark' ? 'on' : ''}`}/></button>
         </div>
-        <button type="button" className="settings-signout" onClick={onLogout}><LogOut size={18} /><span>Sign out</span></button>
+        <div className="settings-section">
+          <div className="settings-section-title">زبان و ظاهر</div>
+          <div className="settings-item"><Languages className="si-icon"/><div className="si-body"><div className="si-title">زبان</div></div><span className="si-value">فارسی</span></div>
+          <button type="button" className="settings-item" onClick={() => setTab('appearance')}><Palette className="si-icon"/><div className="si-body"><div className="si-title">تم رنگی</div></div><span className="si-value">{themeMode === 'dark' ? 'تیره' : themeMode === 'light' ? 'روشن' : 'سیستم'}</span></button>
+          <div className="settings-item"><Type className="si-icon"/><div className="si-body"><div className="si-title">اندازه متن</div></div><span className="si-value">متوسط</span></div>
+        </div>
+        {isAdmin(user) && <div className="settings-section"><div className="settings-section-title">مدیریت</div><button type="button" className="settings-item" onClick={() => setTab('admin')}><Shield className="si-icon"/><div className="si-body"><div className="si-title">پنل مدیریت</div><div className="si-sub">{adminUsers.length} کاربر · {adminChats.length} چت</div></div><ChevronLeft className="si-arrow"/></button></div>}
+        <div className="settings-section">
+          <div className="settings-section-title">درباره</div>
+          <div className="settings-item"><Info className="si-icon"/><div className="si-body"><div className="si-title">درباره Tiny Chat</div><div className="si-sub">Tiny Chat</div></div></div>
+          <button type="button" className="settings-item" onClick={onLogout}><LogOut className="si-icon" style={{color:'var(--danger)'}}/><div className="si-body"><div className="si-title" style={{color:'var(--danger)'}}>خروج از حساب</div></div></button>
+        </div>
       </div>}
 
       {tab === 'profile' && <div className="settings-card form-card settings-detail-card"><div className="settings-detail-avatar"><Avatar entity={{ ...user, displayName: profile.displayName, username: profile.username }} /></div><IonInput label="Display name" value={profile.displayName} onIonInput={(event) => setProfile((current) => ({ ...current, displayName: event.detail.value || '' }))} /><IonInput label="Username" value={profile.username} onIonInput={(event) => setProfile((current) => ({ ...current, username: event.detail.value || '' }))} /><IonInput label="Mobile" value={profile.mobile} onIonInput={(event) => setProfile((current) => ({ ...current, mobile: event.detail.value || '' }))} /><IonToggle checked={profile.hidePresence} onIonChange={(event) => setProfile((current) => ({ ...current, hidePresence: event.detail.checked }))}>Hide presence</IonToggle><IonButton expand="block" onClick={saveProfile}>Save changes</IonButton></div>}
