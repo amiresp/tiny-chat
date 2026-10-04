@@ -519,3 +519,77 @@ html[data-theme='light'] .tc-auth-page{--auth-bg:#e9eef3;--auth-panel:#fff;--aut
 html[data-theme='light'] .reference-app .welcome-content{background:radial-gradient(circle at 72% 24%,rgba(79,143,192,.11),transparent 34%),radial-gradient(circle at 28% 78%,rgba(79,143,192,.06),transparent 30%),var(--bg-main)!important}
 html[data-theme='light'] .welcome-primary{box-shadow:0 8px 20px rgba(79,143,192,.18)}
 @media(max-width:768px){.reference-app .welcome-content{padding:28px 22px!important}.welcome-shell{align-items:center;text-align:center}.welcome-mark{width:62px;height:62px;border-radius:18px;margin-bottom:22px}.welcome-copy h2{font-size:2.05rem}.welcome-copy p{font-size:.88rem}.welcome-actions{width:100%;flex-direction:column}.welcome-actions button{width:100%}.welcome-meta{justify-content:center;flex-wrap:wrap;gap:14px 20px}}
+
+
+/* === Mobile chat ergonomics: compact chrome, more room for composing === */
+@media(max-width:768px){
+  .reference-app .chat-room-page>.ui-header .ui-toolbar{
+    min-height:54px!important;
+    height:54px!important;
+    padding:6px 8px!important;
+    gap:6px!important;
+  }
+  .reference-app .back-arrow{
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+  }
+  .reference-app .back-arrow svg{width:21px;height:21px}
+  .reference-app .room-title{gap:8px!important;min-width:0}
+  .reference-app .room-title .vc-avatar{
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    font-size:.9rem!important;
+  }
+  .reference-app .room-title b{font-size:.86rem!important;max-width:125px}
+  .reference-app .room-title small{font-size:.66rem!important}
+  .reference-app .room-actions{gap:0!important;flex-shrink:0}
+  .reference-app .room-actions .ui-button{
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+  }
+  .reference-app .room-actions .ui-button svg{width:18px;height:18px}
+  .reference-app .room-actions .secondary-room-action{display:none!important}
+
+  .reference-app .composer-footer{padding:6px 7px calc(6px + env(safe-area-inset-bottom))!important}
+  .reference-app .composer-bar{
+    display:grid!important;
+    grid-template-columns:30px 30px minmax(0,1fr) 34px!important;
+    align-items:end!important;
+    gap:3px!important;
+  }
+  .reference-app .composer-bar>.ui-button{
+    width:30px!important;
+    height:36px!important;
+    min-width:30px!important;
+    padding:0!important;
+  }
+  .reference-app .composer-bar>.ui-button svg{width:18px;height:18px}
+  .reference-app .composer-bar>.composer-paste-action{display:none!important}
+  .reference-app .composer-bar .ui-textarea{
+    width:100%!important;
+    min-width:0!important;
+    min-height:38px!important;
+    max-height:104px!important;
+    padding:9px 12px!important;
+    border-radius:19px!important;
+    font-size:.86rem!important;
+    line-height:1.35!important;
+  }
+  .reference-app .composer-bar>.ui-button:nth-last-of-type(2){display:none!important}
+  .reference-app .composer-bar>.ui-button:last-of-type{
+    width:34px!important;
+    height:34px!important;
+    min-width:34px!important;
+    align-self:center!important;
+  }
+  .reference-app .composer-bar>.ui-button:last-of-type svg{width:17px;height:17px}
+}
+@media(max-width:390px){
+  .reference-app .room-title b{max-width:108px}
+  .reference-app .room-actions .ui-button:first-child{display:none!important}
+  .reference-app .composer-bar{grid-template-columns:28px 28px minmax(0,1fr) 34px!important}
+  .reference-app .composer-bar>.ui-button{width:28px!important;min-width:28px!important}
+}
