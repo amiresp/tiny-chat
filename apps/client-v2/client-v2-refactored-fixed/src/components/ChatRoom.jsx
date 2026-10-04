@@ -3,7 +3,7 @@ import {
   IonAlert, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonProgressBar,
   IonRefresher, IonRefresherContent, IonPage, IonTextarea, IonToolbar,
 } from '../ui/primitives';
-import { ChevronLeft, Image, Mic, MoreVertical, Paperclip, Pin, Reply, Search, Send, Smile, Square, X } from 'lucide-react';
+import { ChevronLeft, FileText, Image, Mic, MoreVertical, Paperclip, Pin, Reply, Search, Send, Smile, Square, X } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
@@ -228,7 +228,7 @@ export const ChatRoom = memo(function ChatRoom({
         <IonToolbar>
           <IonButtons slot="start"><IonButton className="desktop-hidden back-arrow" fill="clear" onClick={onBack} aria-label="Back to chats"><ChevronLeft size={26} /></IonButton></IonButtons>
           <button type="button" className="room-title" onClick={onInfo}><Avatar entity={chat} icon={chat.type === 'saved' ? '★' : chat.type === 'group' ? 'G' : undefined} /><span><b>{chat.title}</b><small>{chatSubtitle(chat)}</small></span></button>
-          <IonButtons slot="end" className="room-actions"><IonButton onClick={onSearch} aria-label="Search messages"><Search size={19} /></IonButton><IonButton className="secondary-room-action" onClick={onOpenFiles} aria-label="Files"><Image size={19} /></IonButton><IonButton onClick={onInfo} aria-label="Chat info"><MoreVertical size={20} /></IonButton></IonButtons>
+          <IonButtons slot="end" className="room-actions"><IonButton onClick={onSearch} aria-label="Search messages"><Search size={19} /></IonButton><IonButton className="secondary-room-action" onClick={onOpenFiles} aria-label="Shared files" title="Shared files"><FileText size={19} /></IonButton><IonButton onClick={onInfo} aria-label="Chat info"><MoreVertical size={20} /></IonButton></IonButtons>
         </IonToolbar>
         {upload && <IonProgressBar value={upload.percent / 100} color="primary" />}
         <PinnedBanner message={pinnedMessage} onJump={() => document.querySelector(`[data-message-id="${pinnedMessage?.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} onUnpin={onUnpinPinned} />
