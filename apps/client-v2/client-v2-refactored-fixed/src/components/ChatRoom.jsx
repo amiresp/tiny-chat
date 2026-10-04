@@ -3,7 +3,7 @@ import {
   IonAlert, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonProgressBar,
   IonRefresher, IonRefresherContent, IonPage, IonTextarea, IonToolbar,
 } from '@ionic/react';
-import { ChevronLeft, Image, Info, Mic, Paperclip, Pin, Reply, Search, Send, Smile, Square, Trash2, X } from 'lucide-react';
+import { ChevronLeft, Image, Mic, MoreVertical, Paperclip, Pin, Reply, Search, Send, Smile, Square, X } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
@@ -228,7 +228,7 @@ export const ChatRoom = memo(function ChatRoom({
         <IonToolbar>
           <IonButtons slot="start"><IonButton className="desktop-hidden back-arrow" fill="clear" onClick={onBack} aria-label="Back to chats"><ChevronLeft size={26} /></IonButton></IonButtons>
           <button type="button" className="room-title" onClick={onInfo}><Avatar entity={chat} icon={chat.type === 'saved' ? '★' : chat.type === 'group' ? 'G' : undefined} /><span><b>{chat.title}</b><small>{chatSubtitle(chat)}</small></span></button>
-          <IonButtons slot="end"><IonButton onClick={onSearch} aria-label="Search messages"><Search size={19} /></IonButton><IonButton onClick={onOpenFiles} aria-label="Files"><Image size={19} /></IonButton>{chat.type !== 'saved' && <IonButton color="danger" onClick={() => setConfirmDelete(true)} aria-label="Delete chat"><Trash2 size={18} /></IonButton>}<IonButton onClick={onInfo} aria-label="Chat info"><Info size={19} /></IonButton></IonButtons>
+          <IonButtons slot="end" className="room-actions"><IonButton onClick={onSearch} aria-label="Search messages"><Search size={19} /></IonButton><IonButton className="secondary-room-action" onClick={onOpenFiles} aria-label="Files"><Image size={19} /></IonButton><IonButton onClick={onInfo} aria-label="Chat info"><MoreVertical size={20} /></IonButton></IonButtons>
         </IonToolbar>
         {upload && <IonProgressBar value={upload.percent / 100} color="primary" />}
         <PinnedBanner message={pinnedMessage} onJump={() => document.querySelector(`[data-message-id="${pinnedMessage?.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} onUnpin={onUnpinPinned} />
@@ -249,7 +249,7 @@ export const ChatRoom = memo(function ChatRoom({
         <div className="composer-bar">
           <IonButton fill="clear" disabled={recording} onClick={() => setEmojiOpen((value) => !value)} aria-label="Emoji"><Smile size={20} /></IonButton>
           <IonButton fill="clear" disabled={recording} onClick={() => fileRef.current?.click()} aria-label="Attach file"><Paperclip size={20} /></IonButton>
-          <IonButton fill="clear" disabled={recording} onClick={pasteImageFromClipboard} aria-label="Paste image" title="Paste image from clipboard"><Image size={20} /></IonButton>
+          <IonButton className="composer-paste-action" fill="clear" disabled={recording} onClick={pasteImageFromClipboard} aria-label="Paste image" title="Paste image from clipboard"><Image size={20} /></IonButton>
           <IonTextarea ref={textareaRef} autoGrow rows={1} placeholder={recording ? 'Recording…' : 'Message'} value={text} disabled={recording} onIonInput={(event) => setText(event.detail.value || '')} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent?.isComposing) { event.preventDefault(); onSend(); } }} />
           <IonButton fill={recording ? 'solid' : 'clear'} color={recording ? 'danger' : 'primary'} onClick={recording ? onStopVoice : onStartVoice} aria-label={recording ? 'Stop recording' : 'Record voice'}>{recording ? <Square size={18} /> : <Mic size={20} />}</IonButton>
           <IonButton onClick={onSend} disabled={!text.trim() || recording} aria-label="Send message"><Send size={18} /></IonButton>

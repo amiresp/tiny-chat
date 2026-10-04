@@ -144,3 +144,81 @@ button{touch-action:manipulation}
 @media(max-width:767px){.pwa-install-card{left:10px;right:10px;bottom:82px}}
 .video-media-wrap{position:relative;max-width:100%}.video-media-wrap video{display:block}.media-open-button{position:absolute;right:8px;top:8px;padding:5px 8px;border:0;border-radius:9px;background:rgba(2,6,23,.72);color:#fff;font-size:10px;font-weight:800;cursor:pointer;backdrop-filter:blur(6px)}
 .tiny-empty-actions{display:flex;gap:8px;margin:8px 0 10px}.tiny-empty-actions button{padding:9px 13px;border:1px solid var(--vc-line);border-radius:12px;background:var(--vc-surface);color:var(--vc-text);font-weight:800;cursor:pointer}.tiny-empty-actions button:first-child{border-color:var(--vc-accent);background:var(--vc-accent);color:#fff}.empty-state>small{font-size:11px;color:var(--vc-muted)}
+
+
+/* ---- 2026 compact messenger redesign ---- */
+:root{--tiny-list-width:340px}
+.desktop-shell{background:#0b141e}
+@media(min-width:768px){
+  .desktop-shell{grid-template-columns:var(--tiny-list-width) minmax(0,1fr)!important}
+  .desktop-shell>.tiny-navigation-rail{display:none!important}
+  .desktop-shell>.chat-list-page{grid-column:1!important}
+  .desktop-shell>.main-pane{grid-column:2!important}
+}
+@media(min-width:1100px){
+  .desktop-shell{grid-template-columns:var(--tiny-list-width) minmax(0,1fr)!important}
+  .desktop-shell>.chat-list-page{grid-column:1!important}
+  .desktop-shell>.main-pane{grid-column:2!important}
+}
+.chat-list-page{border-right:1px solid var(--vc-line);box-shadow:none;background:var(--vc-surface)}
+.chat-list-page ion-header,.chat-room-page ion-header{box-shadow:none}
+.chat-list-page ion-toolbar,.chat-room-page ion-toolbar{--border-width:0 0 1px;--border-color:var(--vc-line)}
+.chat-list-toolbar{--min-height:58px}
+.chat-list-toolbar ion-title{padding-inline:4px;font-size:16px;font-weight:800}
+.chat-list-toolbar ion-button{--color:var(--vc-muted)}
+.search-toolbar{--min-height:50px}
+.search-toolbar ion-searchbar{height:44px;padding:4px 10px;--border-radius:20px;--background:var(--vc-surface-2);font-size:13px}
+.folder-toolbar{--min-height:42px}
+.folder-toolbar::part(container){padding:0 8px 7px!important}
+.tiny-chat-filters{padding:0!important;gap:5px}
+.tiny-chat-filters button{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:0;background:transparent;font-size:11px}
+.tiny-chat-filters button.active{background:color-mix(in srgb,var(--vc-accent) 18%,var(--vc-surface));color:var(--vc-accent)}
+.chat-list{padding:5px 0}
+.chat-row{min-height:68px;--background:transparent;--border-radius:0;--padding-start:12px;--inner-padding-end:12px;margin:0;border:0;border-radius:0}
+.chat-row.active{--background:color-mix(in srgb,var(--vc-accent) 28%,var(--vc-surface));border:0}
+.chat-row ion-label{margin-inline:11px}
+.chat-row h2{margin-bottom:4px;font-size:14px;font-weight:700}
+.chat-row p{font-size:12px}
+.chat-row-meta{min-width:45px;gap:5px}
+.vc-avatar{width:48px;height:48px;border-radius:50%;font-size:14px}
+.vc-avatar img{width:100%;height:100%;object-fit:cover}
+.chat-room-page ion-toolbar{--min-height:58px}
+.room-title{gap:10px}
+.room-title .vc-avatar{width:40px;height:40px}
+.room-title b{font-size:14px}
+.room-title small{font-size:11px}
+.room-actions ion-button{--color:var(--vc-muted)}
+.messages-content::part(background){background:#0b141e}
+.messages-content::part(scroll){padding:16px clamp(14px,3vw,44px) 12px!important}
+.message-stack{width:min(100%,920px);gap:7px}
+.message-bubble{max-width:min(72%,620px);gap:4px;padding:8px 11px;border:0;border-radius:16px;background:#182533;box-shadow:0 1px 2px rgba(0,0,0,.28);font-size:13px}
+.message-bubble.mine{background:#2b5278;border-bottom-right-radius:5px}
+.message-line:not(.mine) .message-bubble{border-bottom-left-radius:5px}
+.message-text{line-height:1.5}
+.message-bubble time{font-size:10px;margin-top:1px}
+.message-media{max-height:320px;border-radius:12px}
+.typing-indicator{margin-left:4px;padding:7px 10px;border:0;background:#182533;box-shadow:none}
+.pinned-banner{padding:7px 12px;background:var(--vc-surface);border-top:0;border-bottom:1px solid var(--vc-line)}
+.composer-footer{background:var(--vc-surface);border-top:1px solid var(--vc-line)}
+.composer-bar{max-width:980px;margin:0 auto;align-items:flex-end;gap:1px;padding:7px 8px max(7px,env(safe-area-inset-bottom))}
+.composer-bar ion-button{width:38px;height:38px;margin:0;--padding-start:7px;--padding-end:7px;--border-radius:50%;--color:var(--vc-muted)}
+.composer-bar ion-textarea{min-height:40px;--background:var(--vc-surface-2);--padding-top:10px;--padding-bottom:9px;--padding-start:15px;--padding-end:15px;border-radius:20px;font-size:13px}
+.composer-bar ion-button:last-of-type{--background:#2b5278;--color:#fff;width:40px;height:40px}
+.tiny-emoji-picker{left:8px;bottom:54px;border-radius:14px;background:var(--vc-surface);box-shadow:0 12px 38px rgba(0,0,0,.45)}
+.empty-chat ion-content::part(background){background:#0b141e}
+.empty-state{color:#7d8e9e}
+.empty-state h2{color:#e9edf0}
+@media(max-width:767px){
+  :root{--tiny-list-width:100%}
+  .chat-list-toolbar{--min-height:56px}
+  .folder-toolbar{--min-height:40px}
+  .chat-row{min-height:70px}
+  .messages-content::part(scroll){padding:12px 8px 10px!important}
+  .message-bubble{max-width:88%;font-size:13px}
+  .secondary-room-action{display:none}
+  .composer-paste-action{display:none}
+  .composer-bar{padding-inline:4px}
+  .composer-bar ion-button{width:36px;height:38px}
+  .composer-bar ion-textarea{font-size:14px}
+  .tiny-emoji-picker{left:8px;right:8px;bottom:62px}
+}
