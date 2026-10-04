@@ -398,3 +398,13 @@ body{display:flex;align-items:center;justify-content:center;padding:8px;color:va
 .settings-modal .toggle::after{content:'';position:absolute;top:2px;right:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s}
 .settings-modal .toggle.on{background:var(--accent)}
 .settings-modal .toggle.on::after{right:20px}
+
+/* Full-width reference shell + English/LTR settings */
+.reference-app{max-width:none!important;width:100%!important;height:100vh!important;max-height:none!important;border-radius:0!important;border-left:0!important;border-right:0!important}
+.settings-modal .settings-body,.settings-modal .settings-profile,.settings-modal .settings-item{direction:ltr!important;text-align:left!important}
+.settings-modal .settings-profile .sp-body,.settings-modal .settings-item .si-body{text-align:left!important}
+.settings-modal .settings-section-title{text-align:left!important}
+.settings-modal .settings-item .si-value{margin-left:auto!important;text-align:right!important}
+.settings-modal .settings-item .si-arrow{margin-left:2px!important}
+.settings-modal .toggle::after{left:2px!important;right:auto!important}
+.settings-modal .toggle.on::after{left:20px!important;right:auto!important}
