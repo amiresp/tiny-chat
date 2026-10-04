@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@capacitor/core": "^7.0.1",
-    "@ionic/react": "^8.7.0",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -55,7 +54,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
