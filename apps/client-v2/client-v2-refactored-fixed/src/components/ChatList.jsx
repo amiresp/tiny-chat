@@ -4,7 +4,7 @@ import {
   IonItemOptions, IonItemSliding, IonLabel, IonList, IonPage, IonRefresher,
   IonRefresherContent, IonSearchbar, IonSegment, IonSegmentButton, IonTitle, IonToolbar,
 } from '@ionic/react';
-import { BellOff, EyeOff, Pin, Plus, Settings } from 'lucide-react';
+import { Archive, BellOff, EyeOff, Menu, Pin, Plus, Settings } from 'lucide-react';
 import { Avatar } from './Avatar';
 
 function formatChatTime(value) {
@@ -87,21 +87,16 @@ export const ChatList = memo(function ChatList({
   return (
     <IonPage className={`chat-list-page ${showHidden ? 'tiny-show-hidden-chats' : ''}`}>
       <IonHeader translucent>
-        <IonToolbar>
+        <IonToolbar className="chat-list-toolbar">
+          <IonButtons slot="start"><IonButton onClick={onSettings} aria-label="Menu and settings"><Menu size={21} /></IonButton></IonButtons>
           <IonTitle onClick={(event) => { if (event.detail >= 3) onToggleHiddenReveal(); }} title={showHidden ? 'Hidden chats are visible' : undefined}>Tiny Chat</IonTitle>
-          <IonButtons slot="end">
-            <IonButton onClick={onSettings} aria-label="Settings"><Settings size={19} /></IonButton>
-            <IonButton onClick={onNew} aria-label="New chat"><Plus size={20} /></IonButton>
-          </IonButtons>
+          <IonButtons slot="end"><IonButton className="new-chat-top" onClick={onNew} aria-label="New chat"><Plus size={20} /></IonButton></IonButtons>
         </IonToolbar>
-        <IonToolbar className="search-toolbar"><IonSearchbar debounce={180} value={query} placeholder="Search chats" onIonInput={(event) => setQuery(event.detail.value || '')} /></IonToolbar>
+        <IonToolbar className="search-toolbar"><IonSearchbar debounce={180} value={query} placeholder="Search" onIonInput={(event) => setQuery(event.detail.value || '')} /></IonToolbar>
         <IonToolbar className="folder-toolbar">
-          <IonSegment value={filter} onIonChange={(event) => setFilter(event.detail.value)}>
-            <IonSegmentButton value="active">Chats</IonSegmentButton>
-            <IonSegmentButton value="archived">Archived</IonSegmentButton>
-          </IonSegment>
           <div className="tiny-chat-filters" role="group" aria-label="Chat type">
             {[['all','All'],['private','Private'],['groups','Groups'],['rss','RSS']].map(([value,label]) => <button type="button" key={value} className={typeFilter === value ? 'active' : ''} onClick={() => setTypeFilter(value)}>{label}</button>)}
+            <button type="button" className={filter === 'archived' ? 'active' : ''} onClick={() => setFilter(filter === 'archived' ? 'active' : 'archived')}><Archive size={13} />Archived</button>
           </div>
         </IonToolbar>
       </IonHeader>
