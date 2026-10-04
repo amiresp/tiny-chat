@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { IonButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel, IonList, IonModal, IonSearchbar, IonTitle, IonToast, IonToolbar } from '@ionic/react';
+import { IonButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel, IonList, IonModal, IonSearchbar, IonTitle, IonToast, IonToolbar } from '../ui/primitives';
 import { MessageCircle, Plus, Trash2, X } from 'lucide-react';
 import { api } from '../api';
 import { Avatar } from '../components/Avatar';
