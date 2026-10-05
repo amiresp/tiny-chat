@@ -11,7 +11,7 @@ LOCK_HASH="$(sha256sum package-lock.json | awk '{print $1}')"
 has_valid_dependencies() {
   [[ -d node_modules ]] \
     && [[ -x node_modules/.bin/vite ]] \
-    && node -e "require.resolve('express'); require.resolve('better-sqlite3'); require.resolve('argon2'); require.resolve('drizzle-orm')" >/dev/null 2>&1
+    && node -e "require.resolve('express'); require.resolve('better-sqlite3'); require.resolve('argon2'); require.resolve('drizzle-orm'); require.resolve('vazirmatn/package.json')" >/dev/null 2>&1
 }
 
 if has_valid_dependencies; then
@@ -40,5 +40,6 @@ has_valid_dependencies || {
   exit 1
 }
 
+LOCK_HASH="$(sha256sum package-lock.json | awk '{print $1}')"
 printf '%s' "$LOCK_HASH" > "$MARKER"
 echo "Dependencies are ready."
